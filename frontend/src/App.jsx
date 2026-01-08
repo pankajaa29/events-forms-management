@@ -1,0 +1,86 @@
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import FormList from './pages/FormList';
+import FormEditor from './pages/FormEditor';
+import FormViewer from './pages/FormViewer';
+import FormResults from './pages/FormResults';
+import Login from './pages/Login';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Navbar from './components/Layout/Navbar';
+import './App.css';
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div className="loading">Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+
+  return children;
+};
+
+// Layout wrapper to conditionally hide Navbar on public viewer
+const Layout = ({ children }) => {
+  const location = useLocation();
+  // Hide navbar only on public form viewer (exact match /forms/:id, but not /results)
+  const isPublicViewer = /^\/forms\/\d+$/.test(location.pathname);
+
+  return (
+    <div className="App" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {!isPublicViewer && <Navbar />}
+
+      <main className="main-content" style={{ flexGrow: 1 }}>
+        {children}
+      </main>
+
+      {!isPublicViewer && (
+        <footer className="main-footer" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+          <div className="container">
+            <p>&copy; 2026 LCCIA - Intelligent Forms Management</p>
+          </div>
+        </footer>
+      )}
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<FormList />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/forms/:id" element={<FormViewer />} />
+            <Route
+              path="/forms/:id/results"
+              element={
+                <ProtectedRoute>
+                  <FormResults />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/new"
+              element={
+                <ProtectedRoute>
+                  <FormEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit/:id"
+              element={
+                <ProtectedRoute>
+                  <FormEditor />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Layout>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;

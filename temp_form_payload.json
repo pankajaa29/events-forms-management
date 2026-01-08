@@ -1,0 +1,80 @@
+{
+    "title": "Complex Input Test API",
+    "description": "Created via API for verification",
+    "is_public": true,
+    "sections": [
+        {
+            "title": "Section 1",
+            "order": 0,
+            "questions": [
+                {
+                    "text": "Dropdown Q",
+                    "question_type": "dropdown",
+                    "order": 0,
+                    "options": [
+                        {
+                            "text": "A"
+                        },
+                        {
+                            "text": "B"
+                        }
+                    ]
+                },
+                {
+                    "text": "Boolean Q",
+                    "question_type": "boolean",
+                    "order": 1
+                },
+                {
+                    "text": "Rating Q",
+                    "question_type": "rating",
+                    "order": 2,
+                    "config": {
+                        "max_stars": 5
+                    }
+                },
+                {
+                    "text": "Slider Q",
+                    "question_type": "slider",
+                    "order": 3,
+                    "config": {
+                        "min": 0,
+                        "max": 100
+                    }
+                },
+                {
+                    "text": "Checkbox Q",
+                    "question_type": "checkbox",
+                    "order": 4,
+                    "options": [
+                        {
+                            "text": "X"
+                        },
+                        {
+                            "text": "Y"
+                        }
+                    ]
+                },
+                {
+                    "text": "Matrix Q",
+                    "question_type": "matrix",
+                    "order": 5,
+                    "config": {
+                        "rows": [
+                            "Row 1",
+                            "Row 2"
+                        ]
+                    },
+                    "options": [
+                        {
+                            "text": "Col 1"
+                        },
+                        {
+                            "text": "Col 2"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

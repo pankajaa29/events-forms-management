@@ -1,0 +1,414 @@
+Requirements For – Intelligent Forms Management System
+1. Objective
+Build an endtoend Forms Management System comparable to Google Forms but significantly more powerful, with advanced question types, deep conditional logic, branding, data exports, and a GenAI–assisted intelligence layer. The system must be enterpriseready, deterministic at core, and AIaugmented (not AIdependent).
+2. Core Principles
+	•	Deterministic form engine (no AI in submission logic)
+	•	AI as assistive, advisory, and insightgenerating
+	•	Fully configurable by form owner
+	•	CSV export is nonnegotiable
+	•	Modular, scalable, and APIfirst
+3. Form Builder & Structure
+3.1 Form Hierarchy
+	•	Form
+	•	Sections / Pages
+	•	Questions
+	•	Options
+	•	Validations
+	•	Conditional Logic
+3.2 Navigation & UX
+	•	Singlepage or multistep forms
+	•	Optional progress bar
+	•	Sectionbased navigation via logic
+4. Question & Field Types (Full Scope)
+4.1 Basic Inputs
+	•	Short text
+	•	Long text (paragraph)
+	•	Email (validated)
+	•	Phone number (country code + validation)
+	•	Numeric (integer / decimal)
+	•	URL / hyperlink
+	•	Date / Time / DateTime
+4.2 Choice Inputs
+	•	Single choice (radio)
+	•	Multiple choice (checkbox)
+	•	Dropdown
+	•	Boolean (Yes / No)
+	•	Imagebased choice
+4.3 Scale, Slider & Rating (Critical Differentiator)
+	•	Slider (min, max, step, labels)
+	•	Linear scale (custom ranges)
+	•	Rating (stars, numeric)
+	•	NPS (0–10 with promoter logic)
+4.4 Table / Matrix Inputs
+	•	Multiplechoice grid
+	•	Checkbox grid
+	•	Table input (rows × columns)
+	•	Numeric or text cells
+4.5 Media & Rich Inputs
+	•	File upload (image, video, audio, PDF)
+	•	Google Drive links
+	•	External URLs
+	•	Image capture
+	•	Signature pad
+4.6 Location & Structured Data
+	•	Google Maps location picker
+	•	Latitude / Longitude capture
+	•	Address autofill
+4.7 Smart / Computed Fields
+	•	Calculated fields (sum, average, score)
+	•	Hidden fields
+	•	Autofilled metadata
+5. Conditional Logic Engine
+	•	Show / hide questions based on:
+	•	Selected options
+	•	Numeric ranges
+	•	Ratings / scores
+	•	Section jumps
+	•	Mandatory paths
+	•	Nested conditions
+Logic must be:
+	•	Rulebased
+	•	Humanreadable
+	•	Serializable (JSON)
+6. Form Branding & Theme System
+6.1 Avatar & Branding
+	•	Logo upload (header)
+	•	Form title & description styling
+	•	Reusable theme presets
+6.2 Mandatory Theme: Maroon Family
+Primary color palette based on #811E18
+Example CSS tokens:
+	•	Primary: #811E18
+	•	Primary Dark: #5E1511
+	•	Primary Light: #A63A34
+	•	Accent: #D8A19D
+	•	Background: #FAF5F5
+	•	Text Primary: #2B0D0B
+Applied to:
+	•	Buttons
+	•	Progress bars
+	•	Focus states
+	•	Headers
+	•	Radio / checkbox highlights
+7. Access, Sharing & Permissions
+7.1 Sharing
+	•	Public open link
+	•	Restricted emailonly access
+	•	Passwordprotected forms
+	•	Expiry date / response limit
+7.2 Response Controls
+	•	Allow multiple submissions
+	•	Restrict to single submission per user
+	•	Anonymous or identified responses
+7.3 Roles
+	•	Owner
+	•	Editor
+	•	Viewer (readonly)
+8. Submission & Notification System
+8.1 On Submit
+	•	Custom confirmation message
+	•	Optional redirect URL
+8.2 Email Notifications
+	•	Confirmation email to respondent
+	•	Fully configurable subject & body
+	•	Dynamic placeholders
+	•	Form owner always in BCC
+	•	Optional response PDF attachment
+9. Response Management & Export
+9.1 Dashboard
+	•	Total responses
+	•	Completion rate
+	•	Dropoff analytics
+9.2 Response Viewer
+	•	Table view
+	•	Individual response view
+	•	Filters & search
+	•	Tags
+9.3 Export (Mandatory)
+	•	CSV download (100%)
+	•	Excel (optional)
+	•	JSON (API)
+	•	Media ZIP export
+10. GenAI Scope (Unified)
+10.1 AIAssisted Form Creation
+	•	Generate full form from natural language
+	•	Suggest sections, questions, and types
+	•	Output editable form JSON
+10.2 AI Question Intelligence
+	•	Recommend best question type
+	•	Suggest scales, sliders, tables
+	•	Detect ambiguous or leading questions
+10.3 AI Logic Suggestions
+	•	Convert natural language rules into logic
+	•	Preview logic before applying
+10.4 AI Branding Assistance
+	•	Suggest confirmation messages
+	•	Adjust tone (formal / friendly)
+	•	Brandaligned wording
+10.5 AI Response Intelligence
+	•	Auto summary of responses
+	•	Sentiment analysis
+	•	Theme & keyword extraction
+	•	Auto tagging (complaint, praise, urgent)
+10.6 AI Guardrails
+	•	AI never autoexecutes
+	•	Human confirmation required
+	•	Featureflag controlled
+	•	Cost & usage metered
+11. NonFunctional Requirements
+	•	Performance: <200ms form load
+	•	High availability
+	•	GDPRready data handling
+	•	Audit logs
+	•	Versioning of forms
+12. System Architecture (High Level)
+Frontend
+	•	Form Builder UI
+	•	Logic Builder
+	•	Theme Editor
+	•	Response Dashboard
+Backend
+	•	Form Service
+	•	Logic Engine
+	•	Response Service
+	•	File Storage
+	•	Email Service
+	•	AI Service (isolated)
+Database
+	•	forms
+	•	sections
+	•	questions
+	•	logic_rules
+	•	responses
+	•	answers
+	•	files
+	•	themes
+13. Out of Scope (Explicit)
+	•	Payments
+	•	Authentication provider implementation
+	•	Native mobile apps (PWA acceptable)
+14. Success Criteria
+	•	CSV export works for 100% question types
+	•	AI features are optional and assistive
+	•	Form creation time reduced by >70%
+	•	Branding applies consistently across forms
+I want to follow LEGO blocks approach 
+Below is a micro-goal–based execution plan, end to end, covering Frontend (React), Backend (Django), Database, and Hosting. I want each goal to be small, testable, and dependency-aware.
+Tech Stack Decisions (Locked)
+Frontend
+	•	React (Vite / CRA)
+	•	Component-first (mobile-ready → React Native later)
+	•	State: React Query + Context (no Redux initially)
+Backend
+	•	Python Django
+	•	Django Rest Framework (DRF)
+	•	Django Admin for internal ops
+Database (Call taken)- PostgreSQL (SQL)
+Hosting - AWS 
+Firebase later for analytics or auth if needed
+
+BUILDING BLOCK PLAN (MICRO GOALS)
+Think of this as levels in a game. You never jump levels.
+LEVEL 0 – Project Skeleton (Foundation)
+Goal 0.1 – Repo & Environments
+Frontend
+	•	React app bootstrapped
+	•	Folder structure
+	•	Base routing
+Backend
+	•	Django project
+	•	DRF installed
+	•	.env support
+DB
+	•	PostgreSQL instance (local + dev)
+Hosting
+	•	AWS account
+	•	IAM basics
+Output:
+Empty app that runs end-to-end
+
+LEVEL 1 – Core Data Model (No UI Yet)
+Goal 1.1 – Database Schema v1
+Create only these tables:
+	•	users
+	•	forms
+	•	sections
+	•	questions
+	•	question_options
+No logic. No responses.
+Goal 1.2 – Django Models
+	•	Define models
+	•	Migrations
+	•	Django Admin CRUD
+Goal 1.3 – API Readiness
+	•	Create basic serializers
+	•	CRUD APIs for:
+	•	Form
+	•	Section
+	•	Question
+Output:
+You can create a form via API or admin
+LEVEL 2 – Minimal Form Builder UI
+Goal 2.1 – Form List Screen (React)
+	•	List forms
+	•	Create / delete form
+	•	No fancy UI
+Goal 2.2 – Form Editor v1
+	•	Add sections
+	•	Add questions (text only)
+	•	Save to backend
+No styling. No logic.
+Output:
+You can visually create a simple form
+LEVEL 3 – Form Renderer (Public Side)
+Goal 3.1 – Public Form View
+	•	Fetch form by public ID
+	•	Render sections & questions
+	•	Text input only
+Goal 3.2 – Response Capture v1
+DB
+	•	responses
+	•	response_answers
+Backend
+	•	Submit response API
+Frontend
+	•	Submit button
+	•	Success page (static)
+Output:
+End-to-end form submission works
+
+LEVEL 4 – Question Types Expansion
+Goal 4.1 – Choice Questions
+	•	Radio
+	•	Checkbox
+	•	Dropdown
+Goal 4.2 – Validation Rules
+	•	Required
+	•	Min / Max
+	•	Regex (email, phone)
+Goal 4.3 – CSV Export v1
+	•	Export responses
+	•	Flat CSV
+	•	One row per response
+Output:
+Usable Google-Forms-level MVP
+LEVEL 5 – Advanced Inputs (Your Differentiators)
+Goal 5.1 – Slider & Scale
+	•	Slider (min, max, step)
+	•	Linear scale
+	•	Rating (stars)
+Goal 5.2 – Table / Matrix
+	•	Grid rendering
+	•	Store structured answers
+Goal 5.3 – Media Upload
+	•	File upload
+	•	S3 integration
+	•	Store URLs only in DB
+Output:
+You now exceed Google Forms
+LEVEL 6 – Conditional Logic Engine (Critical)
+Goal 6.1 – Logic Data Model
+	•	logic_rules table
+	•	if / then structure
+Goal 6.2 – Backend Logic Evaluation
+	•	Evaluate rules per response
+	•	Return visible questions
+Goal 6.3 – Frontend Logic Engine
+	•	Hide / show questions dynamically
+	•	Section jumps
+No AI yet.
+Output:
+Smart, dynamic forms
+LEVEL 7 – Branding & Theme Engine
+Goal 7.1 – Theme Model
+	•	colors
+	•	logo
+	•	font
+Goal 7.2 – Maroon Theme (Mandatory)
+Apply #811E18 family to:
+	•	Buttons
+	•	Progress bar
+	•	Focus states
+Goal 7.3 – Theme Application
+	•	Inject CSS variables
+	•	Reusable themes
+Output:
+Brandable forms
+LEVEL 8 – Email & Notifications
+Goal 8.1 – Email Templates
+	•	Confirmation message
+	•	Placeholders
+Goal 8.2 – Email Sending
+	•	AWS SES
+	•	Respondent → To
+	•	Owner → BCC always
+Goal 8.3 – Settings UI
+	•	Toggle email
+	•	Edit message
+Output:
+Professional submission flow
+LEVEL 9 – Gen-AI INTRODUCTION (Carefully)
+AI starts only now, once core is stable.
+Goal 9.1 – AI Form Drafting
+Input:
+“Create customer feedback form”
+Output:
+	•	Draft form JSON
+	•	User must approve
+Goal 9.2 – AI Question Suggestions
+	•	Suggest slider vs rating vs table
+	•	Warn about bad questions
+Goal 9.3 – AI Logic Suggestions
+Input:
+“If rating < 3 ask reason”
+Output:
+	•	Logic rule preview
+Output:
+AI feels helpful, not dangerous
+LEVEL 10 – AI on Responses
+Goal 10.1 – AI Summary
+	•	Per form summary
+	•	Sentiment
+	•	Key themes
+Goal 10.2 – AI Tagging
+	•	Complaint
+	•	Praise
+	•	Urgent
+Stored separately, not overwriting data.
+LEVEL 11 – Hardening & Scale
+Goal 11.1 – Permissions & Roles
+	•	Owner
+	•	Editor
+	•	Viewer
+Goal 11.2 – Audit Logs
+	•	Form edits
+	•	Logic changes
+Goal 11.3 – Performance
+	•	Caching
+	•	Pagination
+Final Result
+You end up with:
+	•	Composable system
+	•	Each block testable alone
+	•	No rewrites
+	•	AI added after stability
+	•	Mobile-ready frontend
+	•	Enterprise-grade backend
+I want to plan above in 2 phases
+Phase 1
+	•	Full form lifecycle
+	•	Advanced questions
+	•	Conditional logic
+	•	Branding
+	•	CSV export
+	•	AI assistance
+	•	Clean React + Django + PostgreSQL stack
+	•	Mobile Friendly UI
+Phase 2
+	•	Drag & drop
+	•	Permissions matrix
+	•	Analytics dashboards
+	•	Mobile app
+	•	Workflow automation
+
+

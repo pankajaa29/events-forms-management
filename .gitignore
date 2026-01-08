@@ -1,0 +1,39 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.env
+db.sqlite3
+db.sqlite3-journal
+
+# Media / Uploads
+backend/media/
+!backend/media/.gitkeep
+
+# Node / JS
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/
+coverage/
+htmlcov/
