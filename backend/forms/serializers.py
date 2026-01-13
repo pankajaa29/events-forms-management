@@ -81,15 +81,37 @@ class FormSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sections_data = validated_data.pop('sections', [])
         form = Form.objects.create(**validated_data)
+        
+        # Map for resolving temp_ids in logic rules
+        temp_id_map = {}
+
         for section_data in sections_data:
             questions_data = section_data.pop('questions', [])
             section = Section.objects.create(form=form, **section_data)
             for question_data in questions_data:
                 question_data.pop('section', None)
                 options_data = question_data.pop('options', [])
+                temp_id = question_data.pop('temp_id', None) # Fix: Remove temp_id
+
                 question = Question.objects.create(section=section, **question_data)
+                
+                if temp_id:
+                    temp_id_map[str(temp_id)] = question.id
+
                 for opt_data in options_data:
                     Option.objects.create(question=question, **opt_data)
+        
+        # Second Pass: Resolve Logic Rules
+        for section in form.sections.all():
+            for question in section.questions.all():
+                if question.logic_rules and 'condition' in question.logic_rules:
+                    condition = question.logic_rules['condition']
+                    target_q_id = str(condition.get('question_id'))
+                    
+                    if target_q_id in temp_id_map:
+                        condition['question_id'] = temp_id_map[target_q_id]
+                        question.save()
+
         return form
 
     def update(self, instance, validated_data):
