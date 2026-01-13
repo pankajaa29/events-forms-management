@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const response = await axios.post('http://localhost:8000/api/token/', {
+            const response = await axios.post('/api/token/', {
                 username,
                 password
             });
