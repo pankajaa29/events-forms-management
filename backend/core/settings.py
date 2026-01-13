@@ -36,7 +36,7 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['events-forms-backend.onrender.com', 'forms.lccia.in', 'localhost', '127.0.0.1'])
 
 
 # Application definition
@@ -171,6 +171,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
+    "https://forms.lccia.in",
+    "https://events-forms-management.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -179,7 +181,15 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
-CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174']
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173", 
+    "http://127.0.0.1:5173", 
+    "http://localhost:5174", 
+    "http://127.0.0.1:5174",
+    "https://forms.lccia.in", 
+    "https://events-forms-backend.onrender.com",
+    "https://events-forms-management.vercel.app"
+]
 
 # Media Files (Uploads)
 MEDIA_URL = '/media/'
