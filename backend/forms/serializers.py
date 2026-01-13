@@ -1,5 +1,28 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Form, Section, Question, Option, Response, Answer
+from .models import Form, Section, Question, Option, Response, Answer, UserProfile
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    mobile_number = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'last_name', 'email', 'mobile_number', 'password')
+
+    def create(self, validated_data):
+        mobile_number = validated_data.pop('mobile_number', '')
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
+        )
+        UserProfile.objects.create(user=user, mobile_number=mobile_number)
+        return user
 
 class OptionSerializer(serializers.ModelSerializer):
     class Meta:

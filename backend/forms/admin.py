@@ -39,3 +39,9 @@ class QuestionAdmin(admin.ModelAdmin):
 class OptionAdmin(admin.ModelAdmin):
     list_display = ('text', 'question', 'order')
     list_filter = ('question__section__form',)
+
+from .models import UserProfile
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'mobile_number')
+    search_fields = ('user__username', 'mobile_number')

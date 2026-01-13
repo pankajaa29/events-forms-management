@@ -1,11 +1,44 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.response import Response as DRFResponse # Rename to avoid conflict with model
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+from django.db.models import Prefetch
+
+# Parsers
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 from .models import Form, Section, Question, Option, Response, Answer
 from .serializers import (
-    FormSerializer, SectionSerializer, QuestionSerializer, OptionSerializer,
-    ResponseSerializer, AnswerSerializer
+    FormSerializer, 
+    SectionSerializer, 
+    QuestionSerializer, 
+    OptionSerializer, 
+    ResponseSerializer, 
+    AnswerSerializer,
+    UserRegistrationSerializer
 )
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return DRFResponse({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': {
+                    'username': user.username,
+                    'email': user.email
+                }
+            }, status=status.HTTP_201_CREATED)
+        return DRFResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class FormViewSet(viewsets.ModelViewSet):
     queryset = Form.objects.all()

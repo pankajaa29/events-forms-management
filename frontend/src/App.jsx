@@ -4,6 +4,7 @@ import FormEditor from './pages/FormEditor';
 import FormViewer from './pages/FormViewer';
 import FormResults from './pages/FormResults';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './App.css';
@@ -50,6 +51,7 @@ function App() {
           <Routes>
             <Route path="/" element={<FormList />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/forms/:id" element={<FormViewer />} />
             <Route
               path="/forms/:id/results"
