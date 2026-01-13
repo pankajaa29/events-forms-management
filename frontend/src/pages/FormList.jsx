@@ -89,7 +89,7 @@ const FormList = () => {
                                     </span>
                                 </div>
                                 <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                    {form.description || 'No description provided.'}
+                                    {form.description ? form.description.replace(/<[^>]*>?/gm, '') : 'No description provided.'}
                                 </p>
                             </div>
 
@@ -118,8 +118,9 @@ const FormList = () => {
                         </Card>
                     ))}
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 
