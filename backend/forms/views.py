@@ -5,6 +5,7 @@ from .serializers import (
     FormSerializer, SectionSerializer, QuestionSerializer, OptionSerializer,
     ResponseSerializer, AnswerSerializer
 )
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 class FormViewSet(viewsets.ModelViewSet):
     queryset = Form.objects.all()
@@ -200,6 +201,42 @@ class ResponseViewSet(viewsets.ModelViewSet):
         # Build absolute URL if needed, but relative usually fine for frontend if handled
         full_url = request.build_absolute_uri(file_url)
         return DRFResponse({'url': full_url})
+
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser, JSONParser])
+    def upload_images(self, request, pk=None):
+        """
+        Dedicated endpoint for uploading form images.
+        Supports both Multipart (request.FILES) and Base64 JSON (request.data).
+        """
+        from rest_framework.response import Response as DRFResponse
+        from django.core.files.base import ContentFile
+        import base64
+        import uuid
+        
+        form = self.get_object()
+        
+        # 1. Handle Standard Multipart Upload
+        if 'logo_image' in request.FILES:
+            form.logo_image = request.FILES['logo_image']
+        if 'background_image' in request.FILES:
+            form.background_image = request.FILES['background_image']
+            
+        # 2. Handle Base64 JSON Upload (Fallback for browser timeout issues)
+        if request.data:
+            if 'logo_image' in request.data and isinstance(request.data['logo_image'], str) and request.data['logo_image'].startswith('data:'):
+                format, imgstr = request.data['logo_image'].split(';base64,') 
+                ext = format.split('/')[-1]
+                data = ContentFile(base64.b64decode(imgstr), name=f"{uuid.uuid4()}.{ext}")
+                form.logo_image = data
+                
+            if 'background_image' in request.data and isinstance(request.data['background_image'], str) and request.data['background_image'].startswith('data:'):
+                format, imgstr = request.data['background_image'].split(';base64,') 
+                ext = format.split('/')[-1]
+                data = ContentFile(base64.b64decode(imgstr), name=f"{uuid.uuid4()}.{ext}")
+                form.background_image = data
+            
+        form.save()
+        return DRFResponse({'status': 'images uploaded', 'logo_url': form.logo_image.url if form.logo_image else None, 'bg_url': form.background_image.url if form.background_image else None})
 
 class AnswerViewSet(viewsets.ModelViewSet):
     queryset = Answer.objects.all()

@@ -70,6 +70,7 @@ class FormSerializer(serializers.ModelSerializer):
         return form
 
     def update(self, instance, validated_data):
+        print(f"DEBUG: Entering FormSerializer.update with data: {validated_data.keys()}")
         sections_data = validated_data.pop('sections', None)
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
@@ -86,11 +87,15 @@ class FormSerializer(serializers.ModelSerializer):
         
         # Handle images
         if 'logo_image' in validated_data:
+            print(f"DEBUG: Updating logo_image: {validated_data['logo_image']}")
             instance.logo_image = validated_data['logo_image']
         if 'background_image' in validated_data:
+            print(f"DEBUG: Updating background_image: {validated_data['background_image']}")
             instance.background_image = validated_data['background_image']
             
+        print("DEBUG: Saving instance...")
         instance.save()
+        print("DEBUG: Instance saved.")
 
         if sections_data is not None:
             # Map for resolving temp_ids in logic rules

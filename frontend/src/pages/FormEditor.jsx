@@ -7,6 +7,7 @@ import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+// ImageUploader removed
 
 const FormEditor = () => {
     const { id } = useParams();
@@ -17,19 +18,20 @@ const FormEditor = () => {
         sections: [],
         primary_color: '#6366F1',
         background_color: '#F8FAFC',
-        logo_image: null,
-        background_image: null,
+        // logo_image: null,
+        // background_image: null,
         notify_creator: false,
         notify_respondent: false,
         email_subject: '',
         email_body: '',
         allow_multiple_responses: true
+        // Internal file state removed
     });
     const [loading, setLoading] = useState(id ? true : false);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        if (id) {
+        if (id && id !== 'new' && !isNaN(id)) {
             fetchForm();
         }
     }, [id]);
@@ -45,6 +47,7 @@ const FormEditor = () => {
         }
     };
 
+    // ... (Section/Question handlers same as before) ...
     const handleAddSection = () => {
         const newSection = {
             title: `New Section ${form.sections.length + 1}`,
@@ -77,7 +80,7 @@ const FormEditor = () => {
             options: [],
             config: {},
             logic_rules: {},
-            temp_id: `TEMP_${Date.now()}` // Generate temporary ID for Logic referencing
+            temp_id: `TEMP_${Date.now()}`
         };
         updatedSections[sectionIndex].questions = [...updatedSections[sectionIndex].questions, newQuestion];
         setForm({ ...form, sections: updatedSections });
@@ -108,10 +111,24 @@ const FormEditor = () => {
 
     const handleSave = async () => {
         if (saving) return;
+
+        // Validation: If notify_respondent is enabled, require a mandatory email question
+        if (form.notify_respondent) {
+            const hasRequiredEmail = form.sections.some(section =>
+                section.questions.some(q => q.question_type === 'email' && q.is_required)
+            );
+
+            if (!hasRequiredEmail) {
+                alert("Configuration Error:\nTo send a confirmation email to the respondent, your form MUST include a 'Required' Email question.\n\nPlease add an Email question and mark it as 'Required', or disable the 'Send Confirmation Email' option in Settings.");
+                return;
+            }
+        }
+
         setSaving(true);
         try {
-            // Exclude image fields from JSON payload to avoid sending URLs to ImageFields
+            // Exclude internal file states from metadata payload
             const { logo_image, background_image, _logoFile, _bgFile, ...formPayload } = form;
+            console.log('Sending Form Payload:', JSON.stringify(formPayload, null, 2));
 
             let savedFormId = id;
             if (id) {
@@ -121,20 +138,18 @@ const FormEditor = () => {
                 savedFormId = response.data.id;
             }
 
-            // Handle File Uploads (if any)
-            if (form._logoFile || form._bgFile) {
-                const formData = new FormData();
-                if (form._logoFile) formData.append('logo_image', form._logoFile);
-                if (form._bgFile) formData.append('background_image', form._bgFile);
+            // Handle Image Uploads via Dedicated Endpoint
+            // Image Upload logic removed
 
-                // We use updateForm (PATCH) to send the files
-                await formService.updateForm(savedFormId, formData);
-            }
-
-            navigate('/');
+            alert('Form saved successfully!');
         } catch (error) {
             console.error('Error saving form:', error);
-            alert('Error saving form. Check console.');
+            if (error.response && error.response.data) {
+                const errorMsg = JSON.stringify(error.response.data, null, 2);
+                alert(`Error saving form:\n${errorMsg}`);
+            } else {
+                alert(`Error saving form: ${error.message}`);
+            }
         } finally {
             setSaving(false);
         }
@@ -144,7 +159,7 @@ const FormEditor = () => {
 
     return (
         <div className="container" style={{ paddingBottom: 'var(--space-12)' }}>
-            {/* Header Actions */}
+            {/* Header Actions - Same as before */}
             <Card className="sticky-top" style={{ marginBottom: 'var(--space-6)', position: 'sticky', top: '1rem', zIndex: 10 }}>
                 <div className="flex-between">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
@@ -169,9 +184,7 @@ const FormEditor = () => {
                 </div>
             </Card>
 
-
-
-            {/* Branding / Design */}
+            {/* Design & Branding */}
             <Card style={{ marginBottom: 'var(--space-6)' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
                     Form Design & Branding
@@ -191,7 +204,6 @@ const FormEditor = () => {
                                         onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
                                         style={{ height: '40px', width: '60px', padding: 0, border: 'none', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>{form.primary_color}</span>
                                 </div>
                             </div>
                             <div>
@@ -203,55 +215,12 @@ const FormEditor = () => {
                                         onChange={(e) => setForm({ ...form, background_color: e.target.value })}
                                         style={{ height: '40px', width: '60px', padding: 0, border: 'none', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>{form.background_color}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Images */}
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Images</label>
-
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Logo</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => {
-                                    if (e.target.files[0]) {
-                                        // Store file for upload
-                                        setForm({ ...form, _logoFile: e.target.files[0] });
-                                    }
-                                }}
-                            />
-                            {form.logo_image && !form._logoFile && (
-                                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--color-success)' }}>
-                                    ✓ Current Logo: <a href={form.logo_image} target="_blank" rel="noopener noreferrer">View</a>
-                                </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Background Image</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => {
-                                    if (e.target.files[0]) {
-                                        // Store file for upload
-                                        setForm({ ...form, _bgFile: e.target.files[0] });
-                                    }
-                                }}
-                            />
-                            {form.background_image && !form._bgFile && (
-                                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--color-success)' }}>
-                                    ✓ Current Bg: <a href={form.background_image} target="_blank" rel="noopener noreferrer">View</a>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
+                    {/* Images Removed */}
                 </div>
             </Card>
 
@@ -266,7 +235,7 @@ const FormEditor = () => {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.5rem' }}>
                         <input
                             type="checkbox"
-                            checked={form.allow_multiple_responses !== false} // Default true, so undefined/null is treated as true
+                            checked={form.allow_multiple_responses !== false}
                             onChange={(e) => setForm({ ...form, allow_multiple_responses: e.target.checked })}
                         />
                         Allow Multiple Responses
@@ -294,7 +263,44 @@ const FormEditor = () => {
                             <input
                                 type="checkbox"
                                 checked={!!form.notify_respondent}
-                                onChange={(e) => setForm({ ...form, notify_respondent: e.target.checked })}
+                                onChange={(e) => {
+                                    const isChecked = e.target.checked;
+                                    let newForm = { ...form, notify_respondent: isChecked };
+
+                                    if (isChecked) {
+                                        const hasRequiredEmail = form.sections.some(s =>
+                                            s.questions.some(q => q.question_type === 'email' && q.is_required)
+                                        );
+
+                                        if (!hasRequiredEmail) {
+                                            // Auto-add email question to first section
+                                            const updatedSections = [...form.sections];
+                                            if (updatedSections.length === 0) {
+                                                updatedSections.push({
+                                                    title: 'Contact Information',
+                                                    description: '',
+                                                    questions: []
+                                                });
+                                            }
+
+                                            updatedSections[0].questions.push({
+                                                text: 'Email Address',
+                                                question_type: 'email',
+                                                is_required: true,
+                                                order: updatedSections[0].questions.length,
+                                                options: [],
+                                                config: {},
+                                                logic_rules: {},
+                                                temp_id: `TEMP_${Date.now()}`
+                                            });
+
+                                            newForm.sections = updatedSections;
+                                            alert("Notice: A 'Required' Email question has been automatically added to the form to support confirmation emails.");
+                                        }
+                                    }
+
+                                    setForm(newForm);
+                                }}
                             />
                             Send Confirmation Email to Respondent
                         </label>
@@ -341,7 +347,7 @@ const FormEditor = () => {
                     <ReactQuill
                         theme="snow"
                         value={form.description}
-                        onChange={(value) => setForm({ ...form, description: value })}
+                        onChange={(value) => setForm(prev => ({ ...prev, description: value }))}
                         placeholder="Enter form description..."
                     />
                 </div>
@@ -415,7 +421,6 @@ const FormEditor = () => {
                                     </div>
 
                                     {/* Question Type Specific Editors */}
-                                    {/* Matrix Rows */}
                                     {question.question_type === 'matrix' && (
                                         <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}>
                                             <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Matrix Rows</label>
@@ -444,7 +449,6 @@ const FormEditor = () => {
                                         </div>
                                     )}
 
-                                    {/* Options (Radio, Checkbox, Dropdown, Matrix Columns) */}
                                     {['radio', 'checkbox', 'dropdown', 'matrix'].includes(question.question_type) && (
                                         <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}>
                                             <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
@@ -475,7 +479,6 @@ const FormEditor = () => {
                                         </div>
                                     )}
 
-                                    {/* Slider Config */}
                                     {question.question_type === 'slider' && (
                                         <div style={{ display: 'flex', gap: '1rem', padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
                                             <div style={{ flex: 1 }}>
@@ -505,7 +508,6 @@ const FormEditor = () => {
                                         </div>
                                     )}
 
-                                    {/* Rating Config */}
                                     {question.question_type === 'rating' && (
                                         <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
                                             <label style={{ fontSize: '0.8rem' }}>Max Stars</label>
@@ -518,7 +520,6 @@ const FormEditor = () => {
                                         </div>
                                     )}
 
-                                    {/* Logic Rules */}
                                     <div style={{ marginTop: 'var(--space-4)' }}>
                                         <Button
                                             variant="text"
