@@ -11,6 +11,7 @@ import './App.css';
 
 import UserList from './pages/admin/UserList';
 import RoleList from './pages/admin/RoleList';
+import DebugAuth from './pages/DebugAuth';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -24,7 +25,7 @@ const ProtectedRoute = ({ children }) => {
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading">Loading...</div>;
-  if (!user || !user.is_platform_admin) return <Navigate to="/" replace />;
+  if (!user || (!user.is_platform_admin && !user.is_superuser)) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -106,6 +107,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/debug-auth" element={<DebugAuth />} />
           </Routes>
         </Layout>
       </Router>

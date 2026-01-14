@@ -24,7 +24,7 @@ const Navbar = () => {
                             <NavLink to="/" className="navbar-link">
                                 Dashboard
                             </NavLink>
-                            {user.is_platform_admin && (
+                            {(user.is_platform_admin || user.is_superuser) && (
                                 <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
                                     <NavLink to="/admin/users" className="navbar-link">
                                         Users

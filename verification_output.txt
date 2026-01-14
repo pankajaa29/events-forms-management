@@ -1,0 +1,9 @@
+/Users/apple/projects/LCCIA Events Forms Management/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Logging in as debug_user...
+Creating form...
+Form ID: 36
+Sending PATCH to forms/36/
+Status: 200
+Success (or at least not 500)
+{"id":36,"title":"Updated Title","description":null,"creator":6,"creator_username":"debug_user","is_public":true,"created_at":"2026-01-14T05:30:48.696996Z","updated_at":"2026-01-14T05:30:48.866972Z","published_at":"2026-01-14T05:30:48.696374Z","slug":null,"is_active":true,"expiry_at":null,"inactive_message":"This form is no longer accepting responses.","sections":[],"primary_color":"#6366F1","background_color":"#F8FAFC","logo_image":null,"logo_alignment":"center","background_image":null,"notify_

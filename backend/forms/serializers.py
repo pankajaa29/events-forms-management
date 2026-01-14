@@ -316,6 +316,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['first_name'] = self.user.first_name
         data['last_name'] = self.user.last_name
         
+        data['is_superuser'] = self.user.is_superuser
+        
         # Add Admin/Status info
         if hasattr(self.user, 'profile'):
             data['is_platform_admin'] = self.user.profile.is_platform_admin

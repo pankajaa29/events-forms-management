@@ -30,8 +30,38 @@ def test_upload():
         print(f"Connection failed: {e}")
         return
 
+    # 1.5 Create Form
+    print("Creating test form...")
+    form_data = {
+        "title": "Test Upload Form",
+        "description": "Created by test script",
+        "sections": [
+            {
+                "title": "Section 1",
+                "description": "Test Section",
+                "order": 0,
+                "questions": [
+                    {
+                        "text": "Question 1",
+                        "question_type": "short_text",
+                        "is_required": False,
+                        "order": 0,
+                        "options": []
+                    }
+                ]
+            }
+        ]
+    }
+    create_resp = requests.post(f"{BASE_URL}/forms/", headers={'Authorization': f'Bearer {token}'}, json=form_data)
+    if create_resp.status_code != 201:
+        print(f"Failed to create form: {create_resp.text}")
+        return
+    
+    FORM_ID = create_resp.json()['id']
+    print(f"Created Form ID: {FORM_ID}")
+
     # 2. Upload
-    print(f"Attempting PATCH upload to form {FORM_ID}...")
+    print(f"Attempting POST upload to form {FORM_ID}...")
     headers = {'Authorization': f'Bearer {token}'}
     
     files = {
@@ -39,7 +69,7 @@ def test_upload():
     }
     
     try:
-        response = requests.patch(f"{BASE_URL}/forms/{FORM_ID}/", headers=headers, files=files, timeout=10)
+        response = requests.post(f"{BASE_URL}/forms/{FORM_ID}/upload_images/", headers=headers, files=files, timeout=10)
         print(f"Response Status: {response.status_code}")
         print(f"Response Body: {response.text}")
     except requests.exceptions.Timeout:

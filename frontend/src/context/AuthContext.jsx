@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
                 first_name: localStorage.getItem('first_name') || '',
                 last_name: localStorage.getItem('last_name') || '',
                 is_platform_admin: localStorage.getItem('is_platform_admin') === 'true',
+                is_superuser: localStorage.getItem('is_superuser') === 'true',
                 platform_status: localStorage.getItem('platform_status') || 'active'
             });
         }
@@ -30,13 +31,14 @@ export const AuthProvider = ({ children }) => {
                 username,
                 password
             });
-            const { access, refresh, first_name, last_name, username: returnedUsername, is_platform_admin, platform_status } = response.data;
+            const { access, refresh, first_name, last_name, username: returnedUsername, is_platform_admin, is_superuser, platform_status } = response.data;
             localStorage.setItem('access_token', access);
             localStorage.setItem('refresh_token', refresh);
             localStorage.setItem('username', returnedUsername);
             localStorage.setItem('first_name', first_name);
             localStorage.setItem('last_name', last_name);
             localStorage.setItem('is_platform_admin', is_platform_admin);
+            localStorage.setItem('is_superuser', is_superuser);
             localStorage.setItem('platform_status', platform_status);
 
             setUser({
@@ -44,6 +46,7 @@ export const AuthProvider = ({ children }) => {
                 first_name,
                 last_name,
                 is_platform_admin,
+                is_superuser,
                 platform_status
             });
             return true;
@@ -60,6 +63,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('first_name');
         localStorage.removeItem('last_name');
         localStorage.removeItem('is_platform_admin');
+        localStorage.removeItem('is_superuser');
         localStorage.removeItem('platform_status');
         setUser(null);
     };
