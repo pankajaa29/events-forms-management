@@ -1,16 +1,18 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import FormList from './pages/FormList';
-import FormEditor from './pages/FormEditor';
-import FormViewer from './pages/FormViewer';
-import FormResults from './pages/FormResults';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './App.css';
+import React, { Suspense, lazy } from 'react';
 
-import UserList from './pages/admin/UserList';
-import RoleList from './pages/admin/RoleList';
+// Lazy Load Pages
+const FormList = lazy(() => import('./pages/FormList'));
+const FormEditor = lazy(() => import('./pages/FormEditor'));
+const FormViewer = lazy(() => import('./pages/FormViewer'));
+const FormResults = lazy(() => import('./pages/FormResults'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const UserList = lazy(() => import('./pages/admin/UserList'));
+const RoleList = lazy(() => import('./pages/admin/RoleList'));
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -59,54 +61,56 @@ function App() {
     <AuthProvider>
       <Router>
         <Layout>
-          <Routes>
-            <Route path="/" element={<FormList />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forms/:id" element={<FormViewer />} />
-            {/* Admin Routes */}
-            <Route
-              path="/admin/users"
-              element={
-                <AdminRoute>
-                  <UserList />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/roles"
-              element={
-                <AdminRoute>
-                  <RoleList />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/forms/:id/results"
-              element={
-                <ProtectedRoute>
-                  <FormResults />
-                </ProtectedRoute>
-              }
-            />
+          <Suspense fallback={<div className="loading-screen">Loading Application...</div>}>
+            <Routes>
+              <Route path="/" element={<FormList />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forms/:id" element={<FormViewer />} />
+              {/* Admin Routes */}
+              <Route
+                path="/admin/users"
+                element={
+                  <AdminRoute>
+                    <UserList />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/roles"
+                element={
+                  <AdminRoute>
+                    <RoleList />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/forms/:id/results"
+                element={
+                  <ProtectedRoute>
+                    <FormResults />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/new"
-              element={
-                <ProtectedRoute>
-                  <FormEditor />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/edit/:id"
-              element={
-                <ProtectedRoute>
-                  <FormEditor />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+              <Route
+                path="/new"
+                element={
+                  <ProtectedRoute>
+                    <FormEditor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <FormEditor />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Suspense>
         </Layout>
       </Router>
     </AuthProvider>

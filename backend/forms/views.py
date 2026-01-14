@@ -141,16 +141,18 @@ class FormViewSet(viewsets.ModelViewSet):
         base_queryset = Form.objects.all()
 
         if not user.is_authenticated:
-             return base_queryset.filter(is_public=True)
+             return base_queryset.filter(is_public=True).prefetch_related('sections__questions__options')
              
         # Admin Access
         if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_platform_admin):
-            return Form.objects.all().order_by('-created_at')
+            return Form.objects.all().prefetch_related('sections__questions__options').order_by('-created_at')
 
         # Ownership + Collaboration + Responded
         return Form.objects.filter(
             Q(creator=user) | Q(collaborators__user=user) | Q(responses__respondent=user)
-        ).distinct().order_by('-created_at')
+        ).distinct().prefetch_related(
+            'sections__questions__options'
+        ).order_by('-created_at')
 
     def perform_create(self, serializer):
         from django.utils import timezone
