@@ -355,7 +355,7 @@ class ResponseViewSet(viewsets.ModelViewSet):
         self.send_notifications(instance, anonymous_email=respondent_email)
 
     def send_notifications(self, response, anonymous_email=None):
-        from django.core.mail import send_mail
+        from django.core.mail import EmailMessage
         from django.conf import settings
         
         form = response.form
@@ -369,7 +369,7 @@ class ResponseViewSet(viewsets.ModelViewSet):
             try:
                 subject = form.email_subject or default_subject
                 body = form.email_body or default_body
-                body = f"New Response Received:\n\n{body}\n\nLink to results: {settings.FRONTEND_URL}/forms/{form.id}/results"
+                full_body = f"New Response Received:\n\n{body}\n\nLink to results: {settings.FRONTEND_URL}/forms/{form.id}/results"
                 
                 reply_to_list = []
                 # Fallback for respondent_email if not set yet for reply_to
@@ -380,14 +380,14 @@ class ResponseViewSet(viewsets.ModelViewSet):
                 if current_respondent_email:
                     reply_to_list = [current_respondent_email]
 
-                send_mail(
+                email = EmailMessage(
                     subject=f"[New Response] {subject}",
-                    message=body,
+                    body=full_body,
                     from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@example.com',
-                    recipient_list=[form.creator.email],
-                    fail_silently=True,
+                    to=[form.creator.email],
                     reply_to=reply_to_list
                 )
+                email.send(fail_silently=True)
             except Exception as e:
                 print(f"Failed to send creator email: {e}")
 
@@ -409,20 +409,20 @@ class ResponseViewSet(viewsets.ModelViewSet):
             try:
                 subject = form.email_subject or default_subject
                 body = form.email_body or default_body
-                body = f"Thank you for your response!\n\n{body}"
+                full_body = f"Thank you for your response!\n\n{body}"
                 
                 reply_to_list = []
                 if form.creator and form.creator.email:
                     reply_to_list = [form.creator.email]
 
-                send_mail(
+                email = EmailMessage(
                     subject=f"[Response Receipt] {subject}",
-                    message=body,
+                    body=full_body,
                     from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@example.com',
-                    recipient_list=[respondent_email],
-                    fail_silently=True,
+                    to=[respondent_email],
                     reply_to=reply_to_list
                 )
+                email.send(fail_silently=True)
             except Exception as e:
                 print(f"Failed to send respondent email: {e}")
 

@@ -49,7 +49,7 @@ const FormViewer = () => {
         setError('');
 
         const responsePayload = {
-            form: parseInt(id),
+            form: form.id,
             respondent_email: respondentEmail,
             answers: Object.entries(answers).map(([qId, val]) => ({
                 question: parseInt(qId),
