@@ -615,3 +615,68 @@ class AdminUserViewSet(viewsets.ReadOnlyModelViewSet):
         
         return DRFResponse(self.get_serializer(user).data)
 
+
+class ProductionSetupView(APIView):
+    """
+    Temporary tool to initialize roles and promote Admin_PAA on Free Tier environments.
+    SECURITY: Uses a secret key check. Will be removed after usage.
+    """
+    permission_classes = [] 
+
+    def get(self, request):
+        secret = request.query_params.get('secret')
+        if secret != 'LCCIA_FREE_SETUP_2026':
+            return DRFResponse({'error': 'Unauthorized'}, status=401)
+        
+        try:
+            # 1. Initialize Roles
+            from .models import Role
+            from django.contrib.auth.models import Permission
+            
+            roles_data = [
+                {
+                    'name': 'Editor', 'slug': 'editor', 'is_system': True, 
+                    'description': 'Full edit access and viewing responses',
+                    'perms': ['change_form', 'view_form', 'publish_form', 'share_form', 'view_responses', 'export_responses']
+                },
+                {
+                    'name': 'Viewer', 'slug': 'viewer', 'is_system': True, 
+                    'description': 'Read-only access to form structure',
+                    'perms': ['view_form']
+                },
+                {
+                    'name': 'Analyst', 'slug': 'analyst', 'is_system': True, 
+                    'description': 'Can view and export responses',
+                    'perms': ['view_form', 'view_responses', 'export_responses']
+                }
+            ]
+            
+            results = []
+            for r_data in roles_data:
+                role, created = Role.objects.get_or_create(
+                    name=r_data['name'],
+                    defaults={'slug': r_data['slug'], 'is_system': True, 'description': r_data['description']}
+                )
+                for codename in r_data['perms']:
+                    try:
+                        perm = Permission.objects.get(codename=codename, content_type__app_label='forms')
+                        role.permissions.add(perm)
+                    except Permission.DoesNotExist:
+                        pass
+                results.append(f"Role {role.name}: {'Created' if created else 'Already Exists'}")
+
+            # 2. Promote Admin_PAA
+            u = User.objects.get(username__iexact='Admin_PAA')
+            u.is_superuser = u.is_staff = True
+            u.save()
+            p, _ = UserProfile.objects.get_or_create(user=u)
+            p.is_platform_admin = True
+            p.save()
+            results.append("User Admin_PAA: Promoted to Superuser & Platform Admin")
+            
+            return DRFResponse({
+                'status': 'success',
+                'actions': results
+            })
+        except Exception as e:
+            return DRFResponse({'error': str(e)}, status=500)

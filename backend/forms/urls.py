@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     FormViewSet, SectionViewSet, QuestionViewSet, OptionViewSet, 
     ResponseViewSet, AnswerViewSet, RegisterView, UploadView,
-    RoleViewSet, AdminUserViewSet
+    RoleViewSet, AdminUserViewSet, ProductionSetupView
 )
 
 router = DefaultRouter()
@@ -20,4 +20,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('register/', RegisterView.as_view(), name='register'),
     path('upload/', UploadView.as_view(), name='upload'),
+    path('prod-setup/', ProductionSetupView.as_view(), name='prod-setup'),
 ]
