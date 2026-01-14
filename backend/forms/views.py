@@ -376,6 +376,17 @@ class ResponseViewSet(viewsets.ModelViewSet):
         if not from_email or from_email == 'webmaster@localhost':
             from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@example.com')
 
+        # DYNAMIC SENDER NAME: "Creator Name via LCCIA" <system@email.com>
+        sender_name = "LCCIA Forms"
+        if form.creator:
+            creator_name = f"{form.creator.first_name} {form.creator.last_name}".strip()
+            if not creator_name:
+                creator_name = form.creator.username
+            sender_name = f"{creator_name} via LCCIA"
+        
+        # Construct the formatted FROM header e.g. "John Doe via LCCIA <admin@lccia.in>"
+        formatted_from = f'"{sender_name}" <{from_email}>'
+
         # Default Subjects/Bodies
         default_subject = f"New Response for {form.title}"
         default_body = f"A new response has been submitted for {form.title}."
@@ -399,7 +410,7 @@ class ResponseViewSet(viewsets.ModelViewSet):
                 email = EmailMessage(
                     subject=f"[New Response] {subject}",
                     body=full_body,
-                    from_email=from_email,
+                    from_email=formatted_from,
                     to=[form.creator.email],
                     reply_to=reply_to_list
                 )
@@ -434,7 +445,7 @@ class ResponseViewSet(viewsets.ModelViewSet):
                 email = EmailMessage(
                     subject=f"[Response Receipt] {subject}",
                     body=full_body,
-                    from_email=from_email,
+                    from_email=formatted_from,
                     to=[respondent_email],
                     reply_to=reply_to_list
                 )
