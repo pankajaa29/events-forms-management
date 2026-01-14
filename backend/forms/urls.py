@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     FormViewSet, SectionViewSet, QuestionViewSet, OptionViewSet, 
-    ResponseViewSet, AnswerViewSet, RegisterView, UploadView,
+    ResponseViewSet, AnswerViewSet, RegisterView, UploadView, EmailDiagnosticView,
     RoleViewSet, AdminUserViewSet
 )
 
@@ -19,5 +19,6 @@ router.register(r'admin/users', AdminUserViewSet, basename='admin-user')
 urlpatterns = [
     path('', include(router.urls)),
     path('register/', RegisterView.as_view(), name='register'),
+    path('diag-email/', EmailDiagnosticView.as_view(), name='diag-email'),
     path('upload/', UploadView.as_view(), name='upload'),
 ]

@@ -316,6 +316,55 @@ class ResponseViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Response.objects.none()
 
+class EmailDiagnosticView(APIView):
+    """
+    Test endpoint to verify SMTP configuration.
+    URL: /api/diag-email/?email=your@email.com
+    """
+    permission_classes = [permissions.AllowAny] # Allow for testing, but we'll use a secret
+
+    def get(self, request):
+        secret = request.query_params.get('secret')
+        if secret != 'LCCIA_EMAIL_DEBUG_2026':
+            return DRFResponse({'error': 'Unauthorized'}, status=403)
+
+        target_email = request.query_params.get('email')
+        if not target_email:
+            return DRFResponse({'error': 'Target email required'}, status=400)
+
+        from django.core.mail import send_mail
+        from django.conf import settings
+        from rest_framework.response import Response as DRFResponse
+        from rest_framework.views import APIView
+        
+        try:
+            from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@example.com')
+            send_mail(
+                subject="Email Diagnostic Test",
+                message="If you received this, your SMTP configuration is working!",
+                from_email=from_email,
+                recipient_list=[target_email],
+                fail_silently=False
+            )
+            return DRFResponse({
+                'status': 'success',
+                'message': f'Test email sent to {target_email}',
+                'config': {
+                    'backend': settings.EMAIL_BACKEND,
+                    'host': settings.EMAIL_HOST,
+                    'port': settings.EMAIL_PORT,
+                    'user': settings.EMAIL_HOST_USER,
+                    'from': from_email
+                }
+            })
+        except Exception as e:
+            import traceback
+            return DRFResponse({
+                'status': 'failed',
+                'error': str(e),
+                'traceback': traceback.format_exc()
+            }, status=500)
+
         # Platform admins see all
         if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_platform_admin):
             return queryset.order_by('-created_at')
@@ -360,6 +409,11 @@ class ResponseViewSet(viewsets.ModelViewSet):
         
         form = response.form
         
+        # Use a sensible from_email (required by some SMTP providers)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+        if not from_email or from_email == 'webmaster@localhost':
+            from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@example.com')
+
         # Default Subjects/Bodies
         default_subject = f"New Response for {form.title}"
         default_body = f"A new response has been submitted for {form.title}."
@@ -383,11 +437,11 @@ class ResponseViewSet(viewsets.ModelViewSet):
                 email = EmailMessage(
                     subject=f"[New Response] {subject}",
                     body=full_body,
-                    from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@example.com',
+                    from_email=from_email,
                     to=[form.creator.email],
                     reply_to=reply_to_list
                 )
-                email.send(fail_silently=True)
+                email.send(fail_silently=False) # Log to console if fails
             except Exception as e:
                 print(f"Failed to send creator email: {e}")
 
@@ -418,13 +472,13 @@ class ResponseViewSet(viewsets.ModelViewSet):
                 email = EmailMessage(
                     subject=f"[Response Receipt] {subject}",
                     body=full_body,
-                    from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@example.com',
+                    from_email=from_email,
                     to=[respondent_email],
                     reply_to=reply_to_list
                 )
-                email.send(fail_silently=True)
+                email.send(fail_silently=False)
             except Exception as e:
-                print(f"Failed to send respondent email: {e}")
+                print(f"FAILED TO SEND EMAIL: {type(e).__name__}: {str(e)}")
 
     @action(detail=False, methods=['get'])
     def export_csv(self, request):

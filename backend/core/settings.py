@@ -190,6 +190,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://events-forms-management.vercel.app"
 ]
 
+FRONTEND_URL = env('FRONTEND_URL', default='https://forms.lccia.in')
+
 # Media Files (Uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
