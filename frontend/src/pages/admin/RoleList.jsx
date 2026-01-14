@@ -44,6 +44,21 @@ const RoleList = () => {
         }
     };
 
+    const handleCreateRole = async () => {
+        const name = prompt("Enter name for the new role:");
+        if (!name) return;
+        const slug = prompt("Enter a unique URL-friendly slug (e.g. manager, lead):").toLowerCase().replace(/[^a-z0-9-]/g, '');
+        if (!slug) return;
+
+        try {
+            await adminService.createRole({ name, slug, description: `Custom role: ${name}`, is_system: false });
+            fetchRoles();
+        } catch (err) {
+            console.error(err);
+            alert("Creation failed. Slug might already exist or format is invalid.");
+        }
+    };
+
     const handleDuplicate = async (role) => {
         const name = prompt("Enter name for the new role:", `Copy of ${role.name}`);
         if (!name) return;
@@ -113,7 +128,7 @@ const RoleList = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <Button variant="secondary" onClick={fetchInitialData}>Refresh</Button>
-                    <Button disabled title="Manual creation coming soon">
+                    <Button onClick={handleCreateRole}>
                         <Plus size={16} /> New Role
                     </Button>
                 </div>
