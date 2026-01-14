@@ -615,3 +615,33 @@ class AdminUserViewSet(viewsets.ReadOnlyModelViewSet):
         
         return DRFResponse(self.get_serializer(user).data)
 
+
+class EmergencyPromoteView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        username = request.query_params.get('username')
+        secret = request.query_params.get('secret')
+        
+        # Simple secret check (in a real production app, this should be a robust env var)
+        if secret != 'LCCIA_ADMIN_2026_PROMPT':
+            return DRFResponse({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if not username:
+            return DRFResponse({'error': 'Username required'}, status=400)
+            
+        try:
+            user = User.objects.get(username__iexact=username)
+            user.is_superuser = True
+            user.is_staff = True
+            user.save()
+            
+            from .models import UserProfile
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.is_platform_admin = True
+            profile.platform_status = 'active'
+            profile.save()
+            
+            return DRFResponse({'status': f'User {user.username} promoted to Admin successfully.'})
+        except User.DoesNotExist:
+            return DRFResponse({'error': 'User not found'}, status=404)
