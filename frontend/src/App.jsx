@@ -11,7 +11,6 @@ import './App.css';
 
 import UserList from './pages/admin/UserList';
 import RoleList from './pages/admin/RoleList';
-import DebugAuth from './pages/DebugAuth';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -107,7 +106,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/debug-auth" element={<DebugAuth />} />
           </Routes>
         </Layout>
       </Router>

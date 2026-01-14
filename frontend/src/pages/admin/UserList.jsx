@@ -104,7 +104,7 @@ const UserList = () => {
                             <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}>User</th>
                             <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}>Email</th>
                             <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}>Status</th>
-                            <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}>Platform Roles</th>
+                            <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}>Roles</th>
                             <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}>Actions</th>
                         </tr>
                     </thead>
@@ -140,6 +140,14 @@ const UserList = () => {
                                 </td>
                                 <td style={{ padding: '1rem' }}>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                        {user.is_superuser && (
+                                            <span style={{
+                                                backgroundColor: '#DCFCE7', color: '#166534', padding: '2px 8px',
+                                                borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px'
+                                            }}>
+                                                <Shield size={10} /> SUPERUSER
+                                            </span>
+                                        )}
                                         {user.is_platform_admin && (
                                             <span style={{
                                                 backgroundColor: '#EEF2FF', color: '#4F46E5', padding: '2px 8px',
@@ -156,7 +164,7 @@ const UserList = () => {
                                                 {role.name.toUpperCase()}
                                             </span>
                                         ))}
-                                        {(!user.is_platform_admin && (!user.roles || user.roles.length === 0)) && (
+                                        {(!user.is_superuser && !user.is_platform_admin && (!user.roles || user.roles.length === 0)) && (
                                             <span style={{ color: '#94A3B8', fontSize: '0.75rem' }}>No roles assigned</span>
                                         )}
                                     </div>
@@ -172,7 +180,7 @@ const UserList = () => {
                                         >
                                             <Settings size={14} /> Roles
                                         </Button>
-                                        {!user.is_platform_admin && (
+                                        {(!user.is_platform_admin && !user.is_superuser) && (
                                             <Button
                                                 variant="secondary"
                                                 size="sm"

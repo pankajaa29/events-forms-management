@@ -114,6 +114,10 @@ class FormSerializer(serializers.ModelSerializer):
         if obj.creator == request.user:
             return 'owner'
         
+        # Superusers and Platform Admins have owner role everywhere
+        if request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.is_platform_admin):
+            return 'owner'
+        
         # Check collaborators
         # Optimization: using filter().first()
         collab = obj.collaborators.filter(user=request.user).select_related('role').first()
@@ -304,10 +308,11 @@ class AdminUserSerializer(serializers.ModelSerializer):
     platform_status = serializers.CharField(source='profile.platform_status', read_only=True)
     is_platform_admin = serializers.BooleanField(source='profile.is_platform_admin', read_only=True)
     roles = RoleSerializer(source='profile.roles', many=True, read_only=True)
+    is_superuser = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined', 'platform_status', 'is_platform_admin', 'roles']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined', 'platform_status', 'is_platform_admin', 'roles', 'is_superuser']
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
