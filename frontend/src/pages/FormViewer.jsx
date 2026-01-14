@@ -18,6 +18,7 @@ const FormViewer = () => {
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
+    const [respondentEmail, setRespondentEmail] = useState('');
 
     useEffect(() => {
         fetchForm();
@@ -49,6 +50,7 @@ const FormViewer = () => {
 
         const responsePayload = {
             form: parseInt(id),
+            respondent_email: respondentEmail,
             answers: Object.entries(answers).map(([qId, val]) => ({
                 question: parseInt(qId),
                 value: String(val)
@@ -181,6 +183,25 @@ const FormViewer = () => {
                 </div>
 
                 <form onSubmit={handleSubmit}>
+                    {/* Anonymous Email Collection */}
+                    {!localStorage.getItem('access_token') && (
+                        <Card style={{ marginBottom: '2rem', borderLeft: `6px solid ${form.primary_color || 'var(--color-primary)'}` }}>
+                            <label style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                                Your Email Address <span style={{ color: 'var(--color-danger)' }}>*</span>
+                            </label>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+                                A confirmation receipt will be sent to this email.
+                            </p>
+                            <input
+                                type="email"
+                                required
+                                value={respondentEmail}
+                                onChange={(e) => setRespondentEmail(e.target.value)}
+                                placeholder="name@example.com"
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}
+                            />
+                        </Card>
+                    )}
                     {form.sections.map(section => (
                         <div key={section.id} style={{ marginBottom: 'var(--space-8)' }}>
                             <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>

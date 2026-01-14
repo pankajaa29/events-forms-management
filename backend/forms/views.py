@@ -131,10 +131,17 @@ class FormViewSet(viewsets.ModelViewSet):
     serializer_class = FormSerializer
     permission_classes = [permissions.IsAuthenticated, IsActiveUser, HasFormPermission]
 
+    def get_permissions(self):
+        if self.action == 'retrieve':
+             return [permissions.AllowAny()]
+        return super().get_permissions()
+
     def get_queryset(self):
         user = self.request.user
+        base_queryset = Form.objects.all()
+
         if not user.is_authenticated:
-             return Form.objects.none()
+             return base_queryset.filter(is_public=True)
              
         # Admin Access
         if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_platform_admin):
@@ -344,9 +351,10 @@ class ResponseViewSet(viewsets.ModelViewSet):
             instance = serializer.save()
         
         # 3. Send Emails
-        self.send_notifications(instance)
+        respondent_email = self.request.data.get('respondent_email')
+        self.send_notifications(instance, anonymous_email=respondent_email)
 
-    def send_notifications(self, response):
+    def send_notifications(self, response, anonymous_email=None):
         from django.core.mail import send_mail
         from django.conf import settings
         
@@ -364,8 +372,13 @@ class ResponseViewSet(viewsets.ModelViewSet):
                 body = f"New Response Received:\n\n{body}\n\nLink to results: {settings.FRONTEND_URL}/forms/{form.id}/results"
                 
                 reply_to_list = []
-                if respondent_email:
-                    reply_to_list = [respondent_email]
+                # Fallback for respondent_email if not set yet for reply_to
+                current_respondent_email = anonymous_email
+                if response.respondent and response.respondent.email:
+                    current_respondent_email = response.respondent.email
+                
+                if current_respondent_email:
+                    reply_to_list = [current_respondent_email]
 
                 send_mail(
                     subject=f"[New Response] {subject}",
@@ -387,6 +400,10 @@ class ResponseViewSet(viewsets.ModelViewSet):
             email_answer = response.answers.filter(question__question_type='email').first()
             if email_answer:
                 respondent_email = email_answer.value
+        
+        # Use anonymous email if provided and no other email found
+        if not respondent_email and anonymous_email:
+            respondent_email = anonymous_email
         
         if form.notify_respondent and respondent_email:
             try:

@@ -63,7 +63,11 @@ class HasFormPermission(permissions.BasePermission):
         if hasattr(request.user, 'profile') and request.user.profile.is_platform_admin:
             return True
             
-        # 2. Creator / Owner
+        # 2. Public Access (Retrieve Only)
+        if view.action == 'retrieve' and obj.is_public:
+            return True
+
+        # 3. Creator / Owner
         if obj.creator == request.user:
             return True
             
