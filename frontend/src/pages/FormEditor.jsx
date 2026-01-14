@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formService } from '../services/api';
-import { Save, ArrowLeft, PlusCircle, Trash2, Share, BarChart, Plus } from 'lucide-react';
+import { Save, ArrowLeft, PlusCircle, Trash2, Share2, BarChart, Eye } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
+import ShareModal from '../components/ShareModal';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 // ImageUploader removed
+
+const getImageUrl = (url) => {
+    return url;
+};
 
 const FormEditor = () => {
     const { id } = useParams();
@@ -23,12 +28,19 @@ const FormEditor = () => {
         notify_creator: false,
         notify_respondent: false,
         email_subject: '',
+        email_subject: '',
         email_body: '',
+        slug: '',
+        is_active: true,
+        expiry_at: null,
+        inactive_message: "This form is no longer accepting responses.",
         allow_multiple_responses: true
         // Internal file state removed
     });
-    const [loading, setLoading] = useState(id ? true : false);
+    const [loading, setLoading] = useState(id && id !== 'new' ? true : false);
     const [saving, setSaving] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (id && id !== 'new' && !isNaN(id)) {
@@ -127,7 +139,8 @@ const FormEditor = () => {
         setSaving(true);
         try {
             // Exclude internal file states from metadata payload
-            const { logo_image, background_image, _logoFile, _bgFile, ...formPayload } = form;
+            // Exclude internal file states from metadata payload
+            const { _logoFile, _bgFile, ...formPayload } = form;
             console.log('Sending Form Payload:', JSON.stringify(formPayload, null, 2));
 
             let savedFormId = id;
@@ -138,8 +151,33 @@ const FormEditor = () => {
                 savedFormId = response.data.id;
             }
 
-            // Handle Image Uploads via Dedicated Endpoint
-            // Image Upload logic removed
+            // Handle Image Uploads via Dedicated Endpoint (Base64 JSON Strategy)
+            if (form._logoBase64 || form._bgBase64) {
+
+
+
+                const imagesPayload = {};
+                if (form._logoBase64) {
+                    imagesPayload.logo_image = form._logoBase64;
+                }
+                if (form._bgBase64) {
+                    imagesPayload.background_image = form._bgBase64;
+                }
+
+                const uploadResponse = await formService.uploadImages(savedFormId, imagesPayload);
+
+                // CRITICAL: Update form state with the new server URLs so the UI reflects the saved state
+                setForm(prev => ({
+                    ...prev,
+                    logo_image: uploadResponse.logo_url || prev.logo_image,
+                    background_image: uploadResponse.bg_url || prev.background_image,
+                    _logoBase64: null,
+                    _bgBase64: null
+                }));
+
+
+            }
+
 
             alert('Form saved successfully!');
         } catch (error) {
@@ -157,436 +195,657 @@ const FormEditor = () => {
 
     if (loading) return <div className="loading">Loading editor...</div>;
 
+    const myRole = form.my_role || (id && id !== 'new' ? 'viewer' : 'owner');
+    const canEdit = myRole === 'owner' || myRole === 'editor';
+    const canShare = myRole === 'owner';
+
     return (
         <div className="container" style={{ paddingBottom: 'var(--space-12)' }}>
-            {/* Header Actions - Same as before */}
+            {!canEdit && (
+                <div style={{ background: '#FEF2F2', color: '#B91C1C', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Eye size={16} /> You are viewing this form in read-only mode.
+                </div>
+            )}
+
+            {/* Header Actions */}
             <Card className="sticky-top" style={{ marginBottom: 'var(--space-6)', position: 'sticky', top: '1rem', zIndex: 10 }}>
-                <div className="flex-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                        <Button variant="secondary" onClick={() => navigate('/')}>
-                            <ArrowLeft size={18} /> Back
+                <div className="flex-between mobile-stack" style={{ gap: 'var(--space-4)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', width: '100%' }}>
+                        <Button variant="secondary" onClick={() => navigate('/')} style={{ padding: '0.5rem' }}>
+                            <ArrowLeft size={18} /> <span className="mobile-hide">Back</span>
                         </Button>
-                        <h1 style={{ margin: 0, fontSize: 'var(--font-size-xl)' }}>{id ? 'Edit Form' : 'New Form'}</h1>
+                        <div style={{ flexGrow: 1, minWidth: 0 }}>
+                            <h1 style={{ margin: 0, fontSize: 'var(--font-size-xl)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {id ? 'Edit Form' : 'New Form'}
+                            </h1>
+                            {id && myRole && (
+                                <span style={{ fontSize: '0.75rem', color: '#6B7280', textTransform: 'capitalize' }}>
+                                    Role: {myRole}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                         {id && (
-                            <Button variant="secondary" onClick={() => navigate(`/forms/${id}/results`)}>
-                                <BarChart size={18} /> Results
+                            <Button variant="secondary" onClick={() => navigate(`/forms/${id}/results`)} size="sm">
+                                <BarChart size={18} /> <span className="mobile-hide">Results</span>
                             </Button>
                         )}
-                        <Button variant="secondary" onClick={handlePreview}>
-                            <Share size={18} /> Preview
+                        <Button variant="secondary" onClick={handlePreview} size="sm">
+                            <Eye size={18} /> <span className="mobile-hide">Preview</span>
                         </Button>
-                        <Button onClick={handleSave} disabled={saving}>
-                            <Save size={18} /> {saving ? 'Saving...' : 'Save Form'}
-                        </Button>
+                        {id && canShare && (
+                            <Button variant="secondary" onClick={() => setShowShareModal(true)} size="sm" style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', borderColor: '#4F46E5' }}>
+                                <Share2 size={18} /> <span className="mobile-hide">Share</span>
+                            </Button>
+                        )}
+                        {canEdit && (
+                            <Button onClick={handleSave} disabled={saving} size="sm">
+                                <Save size={18} /> {saving ? 'Saving...' : <><span className="mobile-hide">Save Form</span><span style={{ display: 'none' }} className="mobile-show">Save</span></>}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </Card>
+
+            {/* Share Modal */}
+            {/* Share Modal */}
+            {showShareModal && (
+                <ShareModal form={form} onClose={() => setShowShareModal(false)} />
+            )}
 
             {/* Design & Branding */}
-            <Card style={{ marginBottom: 'var(--space-6)' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
-                    Form Design & Branding
-                </h3>
-                <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
+            <fieldset disabled={!canEdit} style={{ border: 'none', margin: 0, padding: 0, width: '100%' }}>
+                <Card style={{ marginBottom: 'var(--space-6)' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
+                        Form Design & Branding
+                    </h3>
+                    <div className="flex-between mobile-stack" style={{ gap: 'var(--space-8)' }}>
 
-                    {/* Colors */}
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Theme Colors</label>
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                            <div>
-                                <label style={{ fontSize: '0.8rem' }}>Primary</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <input
-                                        type="color"
-                                        value={form.primary_color || '#6366F1'}
-                                        onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-                                        style={{ height: '40px', width: '60px', padding: 0, border: 'none', cursor: 'pointer' }}
-                                    />
+                        {/* Colors */}
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Theme Colors</label>
+                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem' }}>Primary</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <input
+                                            type="color"
+                                            value={form.primary_color || '#6366F1'}
+                                            onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                                            style={{ height: '40px', width: '60px', padding: 0, border: 'none', cursor: 'pointer' }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.8rem' }}>Background</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <input
-                                        type="color"
-                                        value={form.background_color || '#F8FAFC'}
-                                        onChange={(e) => setForm({ ...form, background_color: e.target.value })}
-                                        style={{ height: '40px', width: '60px', padding: 0, border: 'none', cursor: 'pointer' }}
-                                    />
+                                <div>
+                                    <label style={{ fontSize: '0.8rem' }}>Background</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <input
+                                            type="color"
+                                            value={form.background_color || '#F8FAFC'}
+                                            onChange={(e) => setForm({ ...form, background_color: e.target.value })}
+                                            style={{ height: '40px', width: '60px', padding: 0, border: 'none', cursor: 'pointer' }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Images Removed */}
-                </div>
-            </Card>
+                        {/* Logo & Background */}
+                        <div style={{ flex: 1, width: '100%' }}>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Logo Image</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            // Robust Base64 Reader in UI Thread
+                                            const reader = new FileReader();
+                                            reader.onload = async (ev) => {
+                                                try {
+                                                    const base64 = ev.target.result;
+                                                    const res = await formService.uploadBase64(base64);
+                                                    setForm(prev => ({ ...prev, logo_image: res.url }));
+                                                } catch (err) {
+                                                    console.error("Upload Error:", err);
+                                                    alert(`Upload failed: ${err.message || JSON.stringify(err)}`);
+                                                }
+                                            };
+                                            reader.onerror = (err) => alert("Browser could not read file. Try a different folder (e.g. Desktop).");
+                                            try {
+                                                reader.readAsDataURL(file);
+                                            } catch (readErr) {
+                                                alert("Immediate File Access Error. Permission denied.");
+                                            }
+                                        }
+                                    }}
+                                    style={{ marginBottom: '0.5rem', display: 'block', width: '100%' }}
+                                />
+                                {/* Show Preview of Logo */}
+                                {form.logo_image && (
+                                    <div style={{ marginBottom: '1rem', border: '1px solid #ddd', padding: '5px', borderRadius: '4px' }}>
+                                        <div style={{ fontSize: '0.8rem', marginBottom: '5px', color: 'var(--color-text-muted)' }}>Preview:</div>
+                                        <img
+                                            src={getImageUrl(form.logo_image)}
+                                            alt="Logo Preview"
+                                            style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain' }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Logo Alignment */}
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', marginRight: '0.5rem' }}>Alignment:</label>
+                                    <select
+                                        value={form.logo_alignment || 'center'}
+                                        onChange={(e) => setForm({ ...form, logo_alignment: e.target.value })}
+                                        style={{ padding: '0.25rem', borderRadius: '4px' }}
+                                    >
+                                        <option value="left">Left</option>
+                                        <option value="center">Center</option>
+                                        <option value="right">Right</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Background Image</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = async (ev) => {
+                                                try {
+                                                    const base64 = ev.target.result;
+                                                    const res = await formService.uploadBase64(base64);
+                                                    setForm(prev => ({ ...prev, background_image: res.url }));
+                                                } catch (err) {
+                                                    console.error("Upload Error:", err);
+                                                    alert(`Upload failed: ${err.message || JSON.stringify(err)}`);
+                                                }
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                    style={{ marginBottom: '0.5rem', display: 'block', width: '100%' }}
+                                />
+                                {form.background_image && (
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--color-success)' }}>
+                                        Background set. <a href={getImageUrl(form.background_image)} target="_blank" rel="noreferrer">View</a>
+                                    </div>
+                                )}
+
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            </fieldset>
 
             {/* Notification & Settings */}
-            <Card style={{ marginBottom: 'var(--space-6)' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
-                    Settings & Notifications
-                </h3>
+            <fieldset disabled={!canEdit} style={{ border: 'none', margin: 0, padding: 0, width: '100%' }}>
+                <Card style={{ marginBottom: 'var(--space-6)' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
+                        Settings & Notifications
+                    </h3>
 
-                {/* Response Limits */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                            type="checkbox"
-                            checked={form.allow_multiple_responses !== false}
-                            onChange={(e) => setForm({ ...form, allow_multiple_responses: e.target.checked })}
-                        />
-                        Allow Multiple Responses
-                    </label>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginLeft: '1.5rem' }}>
-                        If unchecked, authenticated users can only submit this form once.
-                    </div>
-                </div>
-
-                {/* Email Settings */}
-                <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '300px' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email Triggers</label>
-
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                            <input
-                                type="checkbox"
-                                checked={!!form.notify_creator}
-                                onChange={(e) => setForm({ ...form, notify_creator: e.target.checked })}
-                            />
-                            Notify Me (Creator) on new response
-                        </label>
-
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={!!form.notify_respondent}
+                    {/* Custom URL Slug */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Custom URL Extension</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>{window.location.origin}/forms/</span>
+                            <Input
+                                placeholder="(Optional) e.g. my-event-name"
+                                value={form.slug || ''}
                                 onChange={(e) => {
-                                    const isChecked = e.target.checked;
-                                    let newForm = { ...form, notify_respondent: isChecked };
+                                    // Only allow alphanumeric and hyphens
+                                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                                    setForm({ ...form, slug: val });
+                                }}
+                                style={{ maxWidth: '300px' }}
+                            />
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                            Leave blank to use the default numeric ID.
+                        </p>
+                    </div>
 
-                                    if (isChecked) {
-                                        const hasRequiredEmail = form.sections.some(s =>
-                                            s.questions.some(q => q.question_type === 'email' && q.is_required)
-                                        );
+                    {/* Response Limits */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={form.allow_multiple_responses !== false}
+                                onChange={(e) => setForm({ ...form, allow_multiple_responses: e.target.checked })}
+                            />
+                            Allow Multiple Responses per Person
+                        </label>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '24px' }}>
+                            If unchecked, users can only submit once.
+                        </p>
+                    </div>
 
-                                        if (!hasRequiredEmail) {
-                                            // Auto-add email question to first section
-                                            const updatedSections = [...form.sections];
-                                            if (updatedSections.length === 0) {
-                                                updatedSections.push({
-                                                    title: 'Contact Information',
-                                                    description: '',
-                                                    questions: []
-                                                });
-                                            }
+                    {/* Form Availability */}
+                    <div style={{ marginBottom: '1.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Form Availability</h4>
 
-                                            updatedSections[0].questions.push({
-                                                text: 'Email Address',
-                                                question_type: 'email',
-                                                is_required: true,
-                                                order: updatedSections[0].questions.length,
-                                                options: [],
-                                                config: {},
-                                                logic_rules: {},
-                                                temp_id: `TEMP_${Date.now()}`
-                                            });
+                        {/* Manual Toggle */}
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={form.is_active !== false}
+                                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                                />
+                                Form is Active (Open for responses)
+                            </label>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '24px', marginTop: '4px' }}>
+                                Uncheck to immediately close the form.
+                            </p>
+                        </div>
 
-                                            newForm.sections = updatedSections;
-                                            alert("Notice: A 'Required' Email question has been automatically added to the form to support confirmation emails.");
-                                        }
-                                    }
-
-                                    setForm(newForm);
+                        {/* Expiration Date */}
+                        <div style={{ marginBottom: '1rem', marginLeft: '24px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                Auto-Close Schedule
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={form.expiry_at ? new Date(form.expiry_at).toISOString().slice(0, 16) : ''}
+                                onChange={(e) => setForm({ ...form, expiry_at: e.target.value || null })}
+                                style={{
+                                    padding: '0.5rem',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: '4px',
+                                    width: '100%',
+                                    maxWidth: '300px'
                                 }}
                             />
-                            Send Confirmation Email to Respondent
-                        </label>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                                Form will automatically close after this time. Leave blank to keep open indefinitely.
+                            </p>
+                        </div>
+
+                        {/* Inactive Message */}
+                        <div style={{ marginLeft: '24px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                Inactive Message
+                            </label>
+                            <textarea
+                                value={form.inactive_message || ''}
+                                onChange={(e) => setForm({ ...form, inactive_message: e.target.value })}
+                                rows={3}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                                This message is shown to visitors when the form is closed.
+                            </p>
+                        </div>
                     </div>
 
-                    {(form.notify_creator || form.notify_respondent) && (
-                        <div style={{ flex: 1, minWidth: '300px', borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email Template</label>
-                            <Input
-                                label="Subject Line"
-                                value={form.email_subject || ''}
-                                onChange={(e) => setForm({ ...form, email_subject: e.target.value })}
-                                placeholder="New Response Received / Thank you for your response"
-                                style={{ marginBottom: '1rem' }}
-                            />
-                            <div className="field">
-                                <label>Email Body</label>
-                                <textarea
-                                    value={form.email_body || ''}
-                                    onChange={(e) => setForm({ ...form, email_body: e.target.value })}
-                                    placeholder="Enter custom message..."
-                                    rows={4}
-                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                    {/* Email Settings */}
+                    <div className="flex-between mobile-stack" style={{ gap: 'var(--space-8)' }}>
+                        <div style={{ flex: 1, width: '100%' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email Triggers</label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!!form.notify_creator}
+                                    onChange={(e) => setForm({ ...form, notify_creator: e.target.checked })}
                                 />
-                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                                    System will append response details automatically.
+                                Notify Me (Creator) on new response
+                            </label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!!form.notify_respondent}
+                                    onChange={(e) => {
+                                        const isChecked = e.target.checked;
+                                        let newForm = { ...form, notify_respondent: isChecked };
+
+                                        if (isChecked) {
+                                            const hasRequiredEmail = form.sections.some(s =>
+                                                s.questions.some(q => q.question_type === 'email' && q.is_required)
+                                            );
+
+                                            if (!hasRequiredEmail) {
+                                                // Auto-add email question to first section
+                                                const updatedSections = [...form.sections];
+                                                if (updatedSections.length === 0) {
+                                                    updatedSections.push({
+                                                        title: 'Contact Information',
+                                                        description: '',
+                                                        questions: []
+                                                    });
+                                                }
+
+                                                updatedSections[0].questions.push({
+                                                    text: 'Email Address',
+                                                    question_type: 'email',
+                                                    is_required: true,
+                                                    order: updatedSections[0].questions.length,
+                                                    options: [],
+                                                    config: {},
+                                                    logic_rules: {},
+                                                    temp_id: `TEMP_${Date.now()}`
+                                                });
+
+                                                newForm.sections = updatedSections;
+                                                alert("Notice: A 'Required' Email question has been automatically added to the form to support confirmation emails.");
+                                            }
+                                        }
+
+                                        setForm(newForm);
+                                    }}
+                                />
+                                Send Confirmation Email to Respondent
+                            </label>
+                        </div>
+
+                        {(form.notify_creator || form.notify_respondent) && (
+                            <div style={{ flex: 1, minWidth: '300px', borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email Template</label>
+                                <Input
+                                    label="Subject Line"
+                                    value={form.email_subject || ''}
+                                    onChange={(e) => setForm({ ...form, email_subject: e.target.value })}
+                                    placeholder="New Response Received / Thank you for your response"
+                                    style={{ marginBottom: '1rem' }}
+                                />
+                                <div className="field">
+                                    <label>Email Body</label>
+                                    <textarea
+                                        value={form.email_body || ''}
+                                        onChange={(e) => setForm({ ...form, email_body: e.target.value })}
+                                        placeholder="Enter custom message..."
+                                        rows={4}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                                    />
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                                        System will append response details automatically.
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            </Card>
+                        )}
+                    </div>
+                </Card >
+            </fieldset>
 
             <Card style={{ marginBottom: 'var(--space-6)' }}>
-                <Input
-                    label="Form Title"
-                    value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    placeholder="Enter form title..."
-                    style={{ fontSize: '1.25rem', fontWeight: 'bold' }}
-                />
-                <div className="field">
-                    <label>Description</label>
-                    <ReactQuill
-                        theme="snow"
-                        value={form.description}
-                        onChange={(value) => setForm(prev => ({ ...prev, description: value }))}
-                        placeholder="Enter form description..."
+                <fieldset disabled={!canEdit} style={{ border: 'none', margin: 0, padding: 0, width: '100%' }}>
+                    <Input
+                        label="Form Title"
+                        value={form.title}
+                        onChange={(e) => setForm({ ...form, title: e.target.value })}
+                        placeholder="Enter form title..."
+                        style={{ fontSize: '1.25rem', fontWeight: 'bold' }}
                     />
-                </div>
+                    <div className="field">
+                        <label>Description</label>
+                        <ReactQuill
+                            theme="snow"
+                            value={form.description}
+                            onChange={(value) => setForm(prev => ({ ...prev, description: value }))}
+                            placeholder="Enter form description..."
+                            readOnly={!canEdit}
+                        />
+                    </div>
+                </fieldset>
             </Card>
 
             {/* Sections */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-                {form.sections.map((section, sIdx) => (
-                    <div key={sIdx} className="section-block" style={{ borderTop: '2px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-                        <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
-                            <div style={{ flexGrow: 1, marginRight: 'var(--space-4)' }}>
-                                <Input
-                                    value={section.title}
-                                    onChange={(e) => handleUpdateSection(sIdx, 'title', e.target.value)}
-                                    placeholder="Section Title"
-                                    style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: 0 }}
-                                />
+                <fieldset disabled={!canEdit} style={{ border: 'none', margin: 0, padding: 0, width: '100%' }}>
+                    {form.sections.map((section, sIdx) => (
+                        <div key={sIdx} className="section-block" style={{ borderTop: '2px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+                            <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
+                                <div style={{ flexGrow: 1, marginRight: 'var(--space-4)' }}>
+                                    <Input
+                                        value={section.title}
+                                        onChange={(e) => handleUpdateSection(sIdx, 'title', e.target.value)}
+                                        placeholder="Section Title"
+                                        style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: 0 }}
+                                    />
+                                </div>
+                                <Button variant="danger" size="sm" onClick={() => handleDeleteSection(sIdx)}>
+                                    <Trash2 size={16} /> Delete Section
+                                </Button>
                             </div>
-                            <Button variant="danger" size="sm" onClick={() => handleDeleteSection(sIdx)}>
-                                <Trash2 size={16} /> Delete Section
-                            </Button>
-                        </div>
 
-                        <div className="questions-list" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                            {section.questions?.map((question, qIdx) => (
-                                <Card key={qIdx} style={{ borderLeft: '4px solid var(--color-primary)' }}>
-                                    <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
-                                        <div style={{ flexGrow: 1 }}>
-                                            <Input
-                                                value={question.text}
-                                                onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'text', e.target.value)}
-                                                placeholder="Question Text"
-                                                style={{ marginBottom: '0.5rem' }}
-                                            />
-                                            <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-                                                <select
-                                                    value={question.question_type}
-                                                    onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'question_type', e.target.value)}
-                                                    style={{ maxWidth: '200px' }}
-                                                >
-                                                    <option value="short_text">Short Text</option>
-                                                    <option value="long_text">Long Text</option>
-                                                    <option value="email">Email</option>
-                                                    <option value="numeric">Numeric</option>
-                                                    <option value="phone">Phone</option>
-                                                    <option value="url">URL</option>
-                                                    <option value="date">Date</option>
-                                                    <option value="time">Time</option>
-                                                    <option value="datetime">DateTime</option>
-                                                    <option value="radio">Single Choice (Radio)</option>
-                                                    <option value="checkbox">Multiple Choice</option>
-                                                    <option value="dropdown">Dropdown</option>
-                                                    <option value="boolean">Boolean (Yes/No)</option>
-                                                    <option value="slider">Slider</option>
-                                                    <option value="rating">Rating</option>
-                                                    <option value="file_upload">File Upload</option>
-                                                    <option value="matrix">Matrix</option>
-                                                </select>
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={question.is_required}
-                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'is_required', e.target.checked)}
-                                                    /> Required
-                                                </label>
+                            <div className="questions-list" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                                {section.questions?.map((question, qIdx) => (
+                                    <Card key={qIdx} style={{ borderLeft: '4px solid var(--color-primary)' }}>
+                                        <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+                                            <div style={{ flexGrow: 1 }}>
+                                                <Input
+                                                    value={question.text}
+                                                    onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'text', e.target.value)}
+                                                    placeholder="Question Text"
+                                                    style={{ marginBottom: '0.5rem' }}
+                                                />
+                                                <div className="flex-between mobile-stack" style={{ gap: 'var(--space-4)' }}>
+                                                    <select
+                                                        value={question.question_type}
+                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'question_type', e.target.value)}
+                                                        style={{ width: '100%', maxWidth: '100%' }}
+                                                    >
+                                                        <option value="short_text">Short Text</option>
+                                                        <option value="long_text">Long Text</option>
+                                                        <option value="email">Email</option>
+                                                        <option value="numeric">Numeric</option>
+                                                        <option value="phone">Phone</option>
+                                                        <option value="url">URL</option>
+                                                        <option value="date">Date</option>
+                                                        <option value="time">Time</option>
+                                                        <option value="datetime">DateTime</option>
+                                                        <option value="radio">Single Choice (Radio)</option>
+                                                        <option value="checkbox">Multiple Choice</option>
+                                                        <option value="dropdown">Dropdown</option>
+                                                        <option value="boolean">Boolean (Yes/No)</option>
+                                                        <option value="slider">Slider</option>
+                                                        <option value="rating">Rating</option>
+                                                        <option value="file_upload">File Upload</option>
+                                                        <option value="matrix">Matrix</option>
+                                                    </select>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={question.is_required}
+                                                            onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'is_required', e.target.checked)}
+                                                        /> Required
+                                                    </label>
+                                                </div>
                                             </div>
+                                            <Button variant="icon" onClick={() => handleDeleteQuestion(sIdx, qIdx)} title="Delete Question">
+                                                <Trash2 size={18} color="var(--color-danger)" />
+                                            </Button>
                                         </div>
-                                        <Button variant="icon" onClick={() => handleDeleteQuestion(sIdx, qIdx)} title="Delete Question">
-                                            <Trash2 size={18} color="var(--color-danger)" />
-                                        </Button>
-                                    </div>
 
-                                    {/* Question Type Specific Editors */}
-                                    {question.question_type === 'matrix' && (
-                                        <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}>
-                                            <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Matrix Rows</label>
-                                            {((question.config || {}).rows || []).map((row, rIdx) => (
-                                                <div key={rIdx} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row}
-                                                        onChange={(e) => {
-                                                            const newRows = [...((question.config || {}).rows || [])];
-                                                            newRows[rIdx] = e.target.value;
+                                        {/* Question Type Specific Editors */}
+                                        {question.question_type === 'matrix' && (
+                                            <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}>
+                                                <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Matrix Rows</label>
+                                                {((question.config || {}).rows || []).map((row, rIdx) => (
+                                                    <div key={rIdx} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={row}
+                                                            onChange={(e) => {
+                                                                const newRows = [...((question.config || {}).rows || [])];
+                                                                newRows[rIdx] = e.target.value;
+                                                                handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, rows: newRows });
+                                                            }}
+                                                            placeholder={`Row ${rIdx + 1}`}
+                                                        />
+                                                        <Button variant="icon" size="sm" onClick={() => {
+                                                            const newRows = ((question.config || {}).rows || []).filter((_, i) => i !== rIdx);
                                                             handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, rows: newRows });
-                                                        }}
-                                                        placeholder={`Row ${rIdx + 1}`}
-                                                    />
-                                                    <Button variant="icon" size="sm" onClick={() => {
-                                                        const newRows = ((question.config || {}).rows || []).filter((_, i) => i !== rIdx);
-                                                        handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, rows: newRows });
-                                                    }}><Trash2 size={14} /></Button>
-                                                </div>
-                                            ))}
-                                            <Button variant="text" size="sm" onClick={() => {
-                                                const newRows = [...((question.config || {}).rows || []), 'New Row'];
-                                                handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, rows: newRows });
-                                            }}><Plus size={14} /> Add Row</Button>
-                                        </div>
-                                    )}
+                                                        }}><Trash2 size={14} /></Button>
+                                                    </div>
+                                                ))}
+                                                <Button variant="text" size="sm" onClick={() => {
+                                                    const newRows = [...((question.config || {}).rows || []), 'New Row'];
+                                                    handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, rows: newRows });
+                                                }}><Plus size={14} /> Add Row</Button>
+                                            </div>
+                                        )}
 
-                                    {['radio', 'checkbox', 'dropdown', 'matrix'].includes(question.question_type) && (
-                                        <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}>
-                                            <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
-                                                {question.question_type === 'matrix' ? 'Columns' : 'Options'}
-                                            </label>
-                                            {(question.options || []).map((opt, oIdx) => (
-                                                <div key={oIdx} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={opt.text}
-                                                        onChange={(e) => {
-                                                            const newOptions = [...question.options];
-                                                            newOptions[oIdx] = { ...newOptions[oIdx], text: e.target.value };
+                                        {['radio', 'checkbox', 'dropdown', 'matrix'].includes(question.question_type) && (
+                                            <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}>
+                                                <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                                                    {question.question_type === 'matrix' ? 'Columns' : 'Options'}
+                                                </label>
+                                                {(question.options || []).map((opt, oIdx) => (
+                                                    <div key={oIdx} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={opt.text}
+                                                            onChange={(e) => {
+                                                                const newOptions = [...question.options];
+                                                                newOptions[oIdx] = { ...newOptions[oIdx], text: e.target.value };
+                                                                handleUpdateQuestion(sIdx, qIdx, 'options', newOptions);
+                                                            }}
+                                                            placeholder={`Option ${oIdx + 1}`}
+                                                        />
+                                                        <Button variant="icon" size="sm" onClick={() => {
+                                                            const newOptions = question.options.filter((_, i) => i !== oIdx);
                                                             handleUpdateQuestion(sIdx, qIdx, 'options', newOptions);
-                                                        }}
-                                                        placeholder={`Option ${oIdx + 1}`}
-                                                    />
-                                                    <Button variant="icon" size="sm" onClick={() => {
-                                                        const newOptions = question.options.filter((_, i) => i !== oIdx);
-                                                        handleUpdateQuestion(sIdx, qIdx, 'options', newOptions);
-                                                    }}><Trash2 size={14} /></Button>
-                                                </div>
-                                            ))}
-                                            <Button variant="text" size="sm" onClick={() => {
-                                                const newOptions = [...(question.options || []), { text: 'New Option', order: (question.options?.length || 0) }];
-                                                handleUpdateQuestion(sIdx, qIdx, 'options', newOptions);
-                                            }}><Plus size={14} /> Add Option</Button>
-                                        </div>
-                                    )}
-
-                                    {question.question_type === 'slider' && (
-                                        <div style={{ display: 'flex', gap: '1rem', padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem' }}>Min</label>
-                                                <input
-                                                    type="number"
-                                                    value={(question.config || {}).min || 0}
-                                                    onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, min: parseInt(e.target.value) })}
-                                                />
+                                                        }}><Trash2 size={14} /></Button>
+                                                    </div>
+                                                ))}
+                                                <Button variant="text" size="sm" onClick={() => {
+                                                    const newOptions = [...(question.options || []), { text: 'New Option', order: (question.options?.length || 0) }];
+                                                    handleUpdateQuestion(sIdx, qIdx, 'options', newOptions);
+                                                }}><Plus size={14} /> Add Option</Button>
                                             </div>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem' }}>Max</label>
-                                                <input
-                                                    type="number"
-                                                    value={(question.config || {}).max || 100}
-                                                    onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, max: parseInt(e.target.value) })}
-                                                />
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem' }}>Step</label>
-                                                <input
-                                                    type="number"
-                                                    value={(question.config || {}).step || 1}
-                                                    onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, step: parseInt(e.target.value) })}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {question.question_type === 'rating' && (
-                                        <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
-                                            <label style={{ fontSize: '0.8rem' }}>Max Stars</label>
-                                            <input
-                                                type="number"
-                                                value={(question.config || {}).max_stars || 5}
-                                                onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, max_stars: parseInt(e.target.value) })}
-                                                style={{ width: '80px' }}
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div style={{ marginTop: 'var(--space-4)' }}>
-                                        <Button
-                                            variant="text"
-                                            size="sm"
-                                            onClick={() => {
-                                                if (question.logic_rules?.condition) {
-                                                    handleUpdateQuestion(sIdx, qIdx, 'logic_rules', {});
-                                                } else {
-                                                    handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { condition: { question_id: '', operator: 'equals', value: '' } });
-                                                }
-                                            }}
-                                            style={{ color: 'var(--color-primary)' }}
-                                        >
-                                            <Share size={14} /> {question.logic_rules?.condition ? 'Remove Logic' : 'Add Conditional Logic'}
-                                        </Button>
-
-                                        {question.logic_rules?.condition && (
-                                            <div style={{ marginTop: '0.5rem', padding: '0.75rem', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                                                <p style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Show this question if:</p>
-                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                    <select
-                                                        value={question.logic_rules.condition.question_id}
-                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { ...question.logic_rules, condition: { ...question.logic_rules.condition, question_id: e.target.value } })}
-                                                        style={{ flex: 2 }}
-                                                    >
-                                                        <option value="">Select Question...</option>
-                                                        {form.sections.flatMap((s, si) =>
-                                                            s.questions.filter((q, qi) => ((si < sIdx) || (si === sIdx && qi < qIdx)) && (q.id || q.temp_id))
-                                                                .map(q => ({ id: q.id || q.temp_id, text: q.text }))
-                                                        ).map(q => (
-                                                            <option key={q.id} value={q.id}>{q.text.substring(0, 30)}</option>
-                                                        ))}
-                                                    </select>
-                                                    <select
-                                                        value={question.logic_rules.condition.operator}
-                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { ...question.logic_rules, condition: { ...question.logic_rules.condition, operator: e.target.value } })}
-                                                        style={{ flex: 1 }}
-                                                    >
-                                                        <option value="equals">Equals</option>
-                                                        <option value="not_equals">Does Not Equal</option>
-                                                    </select>
+                                        {question.question_type === 'slider' && (
+                                            <div style={{ display: 'flex', gap: '1rem', padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.8rem' }}>Min</label>
                                                     <input
-                                                        type="text"
-                                                        value={question.logic_rules.condition.value}
-                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { ...question.logic_rules, condition: { ...question.logic_rules.condition, value: e.target.value } })}
-                                                        placeholder="Value"
-                                                        style={{ flex: 1 }}
+                                                        type="number"
+                                                        value={(question.config || {}).min || 0}
+                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, min: parseInt(e.target.value) })}
+                                                    />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.8rem' }}>Max</label>
+                                                    <input
+                                                        type="number"
+                                                        value={(question.config || {}).max || 100}
+                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, max: parseInt(e.target.value) })}
+                                                    />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.8rem' }}>Step</label>
+                                                    <input
+                                                        type="number"
+                                                        value={(question.config || {}).step || 1}
+                                                        onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, step: parseInt(e.target.value) })}
                                                     />
                                                 </div>
                                             </div>
                                         )}
-                                    </div>
-                                </Card>
-                            ))}
-                            <Button variant="secondary" style={{ alignSelf: 'center', borderStyle: 'dashed' }} onClick={() => handleAddQuestion(sIdx)}>
-                                <PlusCircle size={16} /> Add Question
-                            </Button>
-                        </div>
-                    </div>
-                ))}
 
-                <Card className="flex-center" style={{ borderStyle: 'dashed', backgroundColor: 'transparent', boxShadow: 'none' }}>
-                    <Button onClick={handleAddSection}>
-                        <PlusCircle size={20} /> Add New Section
-                    </Button>
-                </Card>
-            </div>
+                                        {question.question_type === 'rating' && (
+                                            <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
+                                                <label style={{ fontSize: '0.8rem' }}>Max Stars</label>
+                                                <input
+                                                    type="number"
+                                                    value={(question.config || {}).max_stars || 5}
+                                                    onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'config', { ...question.config, max_stars: parseInt(e.target.value) })}
+                                                    style={{ width: '80px' }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div style={{ marginTop: 'var(--space-4)' }}>
+                                            <Button
+                                                variant="text"
+                                                size="sm"
+                                                onClick={() => {
+                                                    if (question.logic_rules?.condition) {
+                                                        handleUpdateQuestion(sIdx, qIdx, 'logic_rules', {});
+                                                    } else {
+                                                        handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { condition: { question_id: '', operator: 'equals', value: '' } });
+                                                    }
+                                                }}
+                                                style={{ color: 'var(--color-primary)' }}
+                                            >
+                                                <Share2 size={14} /> {question.logic_rules?.condition ? 'Remove Logic' : 'Add Conditional Logic'}
+                                            </Button>
+
+                                            {question.logic_rules?.condition && (
+                                                <div style={{ marginTop: '0.5rem', padding: '0.75rem', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                                                    <p style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Show this question if:</p>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                        <select
+                                                            value={question.logic_rules.condition.question_id}
+                                                            onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { ...question.logic_rules, condition: { ...question.logic_rules.condition, question_id: e.target.value } })}
+                                                            style={{ flex: 2 }}
+                                                        >
+                                                            <option value="">Select Question...</option>
+                                                            {form.sections.flatMap((s, si) =>
+                                                                s.questions.filter((q, qi) => ((si < sIdx) || (si === sIdx && qi < qIdx)) && (q.id || q.temp_id))
+                                                                    .map(q => ({ id: q.id || q.temp_id, text: q.text }))
+                                                            ).map(q => (
+                                                                <option key={q.id} value={q.id}>{q.text.substring(0, 30)}</option>
+                                                            ))}
+                                                        </select>
+                                                        <select
+                                                            value={question.logic_rules.condition.operator}
+                                                            onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { ...question.logic_rules, condition: { ...question.logic_rules.condition, operator: e.target.value } })}
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            <option value="equals">Equals</option>
+                                                            <option value="not_equals">Does Not Equal</option>
+                                                        </select>
+                                                        <input
+                                                            type="text"
+                                                            value={question.logic_rules.condition.value}
+                                                            onChange={(e) => handleUpdateQuestion(sIdx, qIdx, 'logic_rules', { ...question.logic_rules, condition: { ...question.logic_rules.condition, value: e.target.value } })}
+                                                            placeholder="Value"
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Card>
+                                ))}
+                                {canEdit && (
+                                    <Button variant="secondary" style={{ alignSelf: 'center', borderStyle: 'dashed' }} onClick={() => handleAddQuestion(sIdx)}>
+                                        <PlusCircle size={16} /> Add Question
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </fieldset>
+
+                {
+                    canEdit && (
+                        <Card className="flex-center" style={{ borderStyle: 'dashed', backgroundColor: 'transparent', boxShadow: 'none' }}>
+                            <Button onClick={handleAddSection}>
+                                <PlusCircle size={20} /> Add New Section
+                            </Button>
+                        </Card>
+                    )
+                }
+            </div >
         </div >
     );
 };

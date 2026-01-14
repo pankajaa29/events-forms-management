@@ -161,6 +161,48 @@ body {
   color: var(--color-text-main);
 }
 
+.navbar-link {
+  text-decoration: none;
+  color: var(--color-text-main);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  padding: var(--space-2) 0;
+  position: relative;
+  transition: var(--transition-base);
+}
+
+.navbar-link:hover {
+  color: var(--color-primary);
+}
+
+.navbar-link.active {
+  color: var(--color-primary);
+}
+
+.navbar-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--color-primary);
+  border-radius: 999px;
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+  from {
+    scale: 0;
+    opacity: 0;
+  }
+
+  to {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
 .card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
@@ -251,4 +293,69 @@ label {
   height: 200px;
   color: var(--color-text-muted);
   font-weight: 500;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  :root {
+    --font-size-2xl: 1.25rem;
+    --font-size-3xl: 1.5rem;
+    --space-6: 1rem;
+    --space-8: 1.5rem;
+  }
+
+  .container {
+    padding: 0 var(--space-3);
+  }
+
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .mobile-no-padding {
+    padding: 0 !important;
+  }
+
+  .mobile-p-4 {
+    padding: var(--space-4) !important;
+  }
+
+  /* Sticky headers on mobile */
+  .sticky-top {
+    position: relative !important;
+    top: 0 !important;
+  }
+
+  /* Form spacing */
+  .field {
+    margin-bottom: var(--space-4);
+  }
+
+  /* Button touch targets */
+  .btn {
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* Navbar Adjustments */
+  .navbar .container {
+    gap: var(--space-2);
+  }
+
+  .navbar-brand span {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .flex-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
 }

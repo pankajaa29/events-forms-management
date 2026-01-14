@@ -1,6 +1,32 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from rest_framework import serializers
-from .models import Form, Section, Question, Option, Response, Answer, UserProfile
+from .models import Form, Section, Question, Option, Response, Answer, UserProfile, Role, FormCollaborator
+
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ['id', 'name', 'codename', 'content_type']
+
+class RoleSerializer(serializers.ModelSerializer):
+    permissions_details = PermissionSerializer(source='permissions', many=True, read_only=True)
+    
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'slug', 'description', 'is_system', 'permissions', 'permissions_details']
+        extra_kwargs = {
+            'permissions': {'write_only': True}
+        }
+
+class FormCollaboratorSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    role_slug = serializers.CharField(source='role.slug', read_only=True)
+    role_name = serializers.CharField(source='role.name', read_only=True)
+
+    class Meta:
+        model = FormCollaborator
+        fields = ['id', 'user', 'user_email', 'user_username', 'role', 'role_slug', 'role_name', 'invited_at']
+
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -55,15 +81,18 @@ class FormSerializer(serializers.ModelSerializer):
     sections = SectionSerializer(many=True)
     creator_username = serializers.SerializerMethodField()
     has_responded = serializers.SerializerMethodField()
+    my_role = serializers.SerializerMethodField()
 
     class Meta:
         model = Form
         fields = [
             'id', 'title', 'description', 'creator', 'creator_username', 
-            'is_public', 'created_at', 'updated_at', 'sections',
-            'primary_color', 'background_color', 'logo_image', 'background_image',
+            'is_public', 'created_at', 'updated_at', 'published_at', 'slug',
+            'is_active', 'expiry_at', 'inactive_message',
+            'sections',
+            'primary_color', 'background_color', 'logo_image', 'logo_alignment', 'background_image',
             'notify_creator', 'notify_respondent', 'email_subject', 'email_body', 'allow_multiple_responses',
-            'has_responded'
+            'has_responded', 'my_role'
         ]
         read_only_fields = ['creator', 'has_responded']
 
@@ -77,6 +106,20 @@ class FormSerializer(serializers.ModelSerializer):
             Response = apps.get_model('forms', 'Response')
             return Response.objects.filter(form=obj, respondent=request.user).exists()
         return False
+
+    def get_my_role(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        if obj.creator == request.user:
+            return 'owner'
+        
+        # Check collaborators
+        # Optimization: using filter().first()
+        collab = obj.collaborators.filter(user=request.user).select_related('role').first()
+        return collab.role.slug if collab else None
+
+
 
     def create(self, validated_data):
         sections_data = validated_data.pop('sections', [])
@@ -120,10 +163,15 @@ class FormSerializer(serializers.ModelSerializer):
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
         instance.is_public = validated_data.get('is_public', instance.is_public)
+        instance.slug = validated_data.get('slug', instance.slug)
+        instance.is_active = validated_data.get('is_active', instance.is_active)
+        instance.expiry_at = validated_data.get('expiry_at', instance.expiry_at)
+        instance.inactive_message = validated_data.get('inactive_message', instance.inactive_message)
         
         # Branding fields
         instance.primary_color = validated_data.get('primary_color', instance.primary_color)
         instance.background_color = validated_data.get('background_color', instance.background_color)
+        instance.logo_alignment = validated_data.get('logo_alignment', instance.logo_alignment)
         instance.notify_creator = validated_data.get('notify_creator', instance.notify_creator)
         instance.notify_respondent = validated_data.get('notify_respondent', instance.notify_respondent)
         instance.email_subject = validated_data.get('email_subject', instance.email_subject)
@@ -248,3 +296,32 @@ class ResponseSerializer(serializers.ModelSerializer):
         for answer_data in answers_data:
             Answer.objects.create(response=response, **answer_data)
         return response
+
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    platform_status = serializers.CharField(source='profile.platform_status', read_only=True)
+    is_platform_admin = serializers.BooleanField(source='profile.is_platform_admin', read_only=True)
+    roles = RoleSerializer(source='profile.roles', many=True, read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined', 'platform_status', 'is_platform_admin', 'roles']
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['username'] = self.user.username
+        data['first_name'] = self.user.first_name
+        data['last_name'] = self.user.last_name
+        
+        # Add Admin/Status info
+        if hasattr(self.user, 'profile'):
+            data['is_platform_admin'] = self.user.profile.is_platform_admin
+            data['platform_status'] = self.user.profile.platform_status
+        else:
+            data['is_platform_admin'] = False
+            data['platform_status'] = 'active' # Default
+            
+        return data

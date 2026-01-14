@@ -59,7 +59,65 @@ export const formService = {
     getForm: (id) => api.get(`forms/${id}/`),
     createForm: (data) => api.post('forms/', data),
     updateForm: (id, data) => api.patch(`forms/${id}/`, data),
+    uploadImages: async (id, payload) => {
+        // ... (Keep existing if needed, but we are moving away) ...
+        // For now, I'll keep it to avoid breaking other things, but add new method below
+        const token = localStorage.getItem('access_token');
+        const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+        const baseUrl = import.meta.env.DEV ? 'http://127.0.0.1:8000' : '';
+        const url = `${baseUrl}/api/forms/${id}/upload_images/`;
+
+        const isFormData = payload instanceof FormData;
+        const headers = { 'Authorization': `Bearer ${token}`, 'X-CSRFToken': csrfToken };
+        if (!isFormData) headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(url, { method: 'POST', headers: headers, body: isFormData ? payload : JSON.stringify(payload) });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    uploadBase64: async (base64String) => {
+        // Use 'api' instance to leverage Interceptors (Auto-Refresh Token)
+        try {
+            console.log("Sending Base64 JSON Payload via Axios...");
+            const response = await api.post('upload/', { file_data: base64String });
+            console.log("Upload Success:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("Upload Base64 Error:", error);
+            // Axios throws clean error objects usually
+            throw error;
+        }
+    },
+
+    // Legacy/Fallback (FormData - seemingly unstable on this env)
+    uploadFile: async (file) => {
+        // Redirect to Base64 logic if possible, or fail. 
+        // We will change FormEditor to call uploadBase64 directly.
+        throw new Error("Use uploadBase64 instead.");
+    },
     deleteForm: (id) => api.delete(`forms/${id}/`),
+
+    // Collaboration
+    getRoles: () => api.get('roles/'),
+    getCollaborators: (id) => api.get(`forms/${id}/collaborators/`),
+    inviteCollaborator: (id, email, role) => api.post(`forms/${id}/collaborators/`, { email, role }),
+    removeCollaborator: (id, userId) => api.post(`forms/${id}/remove_collaborator/`, { user_id: userId }),
+};
+
+export const adminService = {
+    getUsers: () => api.get('admin/users/'),
+    blockUser: (id) => api.patch(`admin/users/${id}/block/`),
+    unblockUser: (id) => api.patch(`admin/users/${id}/unblock/`),
+    assignRoles: (id, roleIds) => api.post(`admin/users/${id}/assign_roles/`, { role_ids: roleIds }),
+
+    // Role Management
+    getRoles: () => api.get('roles/'),
+    createRole: (data) => api.post('roles/', data),
+    updateRole: (id, data) => api.patch(`roles/${id}/`, data),
+    deleteRole: (id) => api.delete(`roles/${id}/`),
+    duplicateRole: (id, name, slug) => api.post(`roles/${id}/duplicate/`, { name, slug }),
+    getPermissions: () => api.get('roles/permissions/'),
 };
 
 export const sectionService = {

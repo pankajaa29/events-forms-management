@@ -13,7 +13,13 @@ export const AuthProvider = ({ children }) => {
         if (token) {
             // In a real app, we'd verify the token or fetch user profile here
             // For now, we'll assume valid if present
-            setUser({ username: localStorage.getItem('username') || 'User' });
+            setUser({
+                username: localStorage.getItem('username') || 'User',
+                first_name: localStorage.getItem('first_name') || '',
+                last_name: localStorage.getItem('last_name') || '',
+                is_platform_admin: localStorage.getItem('is_platform_admin') === 'true',
+                platform_status: localStorage.getItem('platform_status') || 'active'
+            });
         }
         setLoading(false);
     }, []);
@@ -24,11 +30,22 @@ export const AuthProvider = ({ children }) => {
                 username,
                 password
             });
-            const { access, refresh } = response.data;
+            const { access, refresh, first_name, last_name, username: returnedUsername, is_platform_admin, platform_status } = response.data;
             localStorage.setItem('access_token', access);
             localStorage.setItem('refresh_token', refresh);
-            localStorage.setItem('username', username);
-            setUser({ username });
+            localStorage.setItem('username', returnedUsername);
+            localStorage.setItem('first_name', first_name);
+            localStorage.setItem('last_name', last_name);
+            localStorage.setItem('is_platform_admin', is_platform_admin);
+            localStorage.setItem('platform_status', platform_status);
+
+            setUser({
+                username: returnedUsername,
+                first_name,
+                last_name,
+                is_platform_admin,
+                platform_status
+            });
             return true;
         } catch (error) {
             console.error('Login failed:', error);
@@ -40,6 +57,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('username');
+        localStorage.removeItem('first_name');
+        localStorage.removeItem('last_name');
+        localStorage.removeItem('is_platform_admin');
+        localStorage.removeItem('platform_status');
         setUser(null);
     };
 

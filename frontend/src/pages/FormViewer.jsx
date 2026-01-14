@@ -5,6 +5,10 @@ import { Send, CheckCircle } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 
+const getImageUrl = (url) => {
+    return url;
+};
+
 const FormViewer = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -86,6 +90,21 @@ const FormViewer = () => {
     if (loading) return <div className="loading">Loading form...</div>;
     if (error) return <div className="container" style={{ marginTop: '2rem', textAlign: 'center' }}><Card>{error}</Card></div>;
 
+    // Check for Inactivation / Expiration
+    const isExpired = form && form.expiry_at && new Date() > new Date(form.expiry_at);
+    if (form && (!form.is_active || isExpired)) {
+        return (
+            <div className="container" style={{ marginTop: '4rem', textAlign: 'center', maxWidth: '600px' }}>
+                <Card style={{ borderTop: `4px solid ${form.primary_color || '#6366F1'}` }}>
+                    <h2 style={{ marginBottom: 'var(--space-4)', color: '#EF4444' }}>Form Closed</h2>
+                    <p style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text-muted)' }}>
+                        {form.inactive_message || "This form is no longer accepting responses."}
+                    </p>
+                </Card>
+            </div>
+        );
+    }
+
     // Check if user has already responded (and multiple responses are not allowed)
     if (form && form.has_responded && !form.allow_multiple_responses) {
         return (
@@ -124,7 +143,7 @@ const FormViewer = () => {
             minHeight: '100vh',
             paddingBottom: '4rem',
             backgroundColor: form.background_color || '#F8FAFC',
-            backgroundImage: form.background_image ? `url(${form.background_image})` : 'none',
+            backgroundImage: form.background_image ? `url(${getImageUrl(form.background_image)})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed'
@@ -133,9 +152,13 @@ const FormViewer = () => {
 
                 {/* Logo */}
                 {form.logo_image && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: form.logo_alignment === 'left' ? 'flex-start' : (form.logo_alignment === 'right' ? 'flex-end' : 'center'),
+                        marginBottom: '2rem'
+                    }}>
                         <img
-                            src={form.logo_image}
+                            src={getImageUrl(form.logo_image)}
                             alt="Logo"
                             style={{ maxHeight: '120px', maxWidth: '100%', objectFit: 'contain' }}
                         />

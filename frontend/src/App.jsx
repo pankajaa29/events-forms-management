@@ -9,6 +9,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './App.css';
 
+import UserList from './pages/admin/UserList';
+import RoleList from './pages/admin/RoleList';
+
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
@@ -18,11 +21,19 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="loading">Loading...</div>;
+  if (!user || !user.is_platform_admin) return <Navigate to="/" replace />;
+  return children;
+};
+
 // Layout wrapper to conditionally hide Navbar on public viewer
 const Layout = ({ children }) => {
   const location = useLocation();
-  // Hide navbar only on public form viewer (exact match /forms/:id, but not /results)
-  const isPublicViewer = /^\/forms\/\d+$/.test(location.pathname);
+  // Hide navbar only on public form viewer (exact match /forms/:id or /forms/:slug, but not /results)
+  // Updated regex to handle non-numeric slugs if needed
+  const isPublicViewer = /^\/forms\/[^/]+$/.test(location.pathname);
 
   return (
     <div className="App" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -35,7 +46,7 @@ const Layout = ({ children }) => {
       {!isPublicViewer && (
         <footer className="main-footer" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
           <div className="container">
-            <p>&copy; 2026 LCCIA - Intelligent Forms Management</p>
+            <p>&copy; 2026 eForms - Intelligent Forms Management</p>
           </div>
         </footer>
       )}
@@ -53,6 +64,23 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forms/:id" element={<FormViewer />} />
+            {/* Admin Routes */}
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <UserList />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/roles"
+              element={
+                <AdminRoute>
+                  <RoleList />
+                </AdminRoute>
+              }
+            />
             <Route
               path="/forms/:id/results"
               element={
