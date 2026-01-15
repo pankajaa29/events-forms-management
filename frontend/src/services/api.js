@@ -103,6 +103,11 @@ export const formService = {
     getCollaborators: (id) => api.get(`forms/${id}/collaborators/`),
     inviteCollaborator: (id, email, role) => api.post(`forms/${id}/collaborators/`, { email, role }),
     removeCollaborator: (id, userId) => api.post(`forms/${id}/remove_collaborator/`, { user_id: userId }),
+
+    // Private Access
+    getInvitees: (id) => api.get(`forms/${id}/invitees/`),
+    addInvitees: (id, emails) => api.post(`forms/${id}/invitees/`, { emails }),
+    removeInvitee: (id, email) => api.delete(`forms/${id}/invitees/?email=${encodeURIComponent(email)}`),
 };
 
 export const adminService = {

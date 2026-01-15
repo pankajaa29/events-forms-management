@@ -51,11 +51,27 @@ const FormEditor = () => {
     const fetchForm = async () => {
         try {
             const response = await formService.getForm(id);
-            setForm(response.data);
+            const formData = response.data;
+            setForm(formData);
+
+            // If private, fetch invitees
+            if (!formData.is_public) {
+                fetchInvitees(formData);
+            }
         } catch (error) {
             console.error('Error fetching form:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchInvitees = async (currentForm) => {
+        try {
+            const res = await formService.getInvitees(id);
+            setForm(prev => ({ ...prev, _invitees: res.data }));
+        } catch (error) {
+            console.error("Error fetching invitees:", error);
+            setForm(prev => ({ ...prev, _invitees: [] }));
         }
     };
 
@@ -427,6 +443,85 @@ const FormEditor = () => {
                         <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '24px' }}>
                             If unchecked, users can only submit once.
                         </p>
+                    </div>
+
+                    {/* Access Control (Private Forms) */}
+                    <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1.5rem' }}>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Access Control</h4>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!form.is_public}
+                                    onChange={(e) => setForm({ ...form, is_public: !e.target.checked })}
+                                />
+                                Private Form (Invite Only)
+                            </label>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '24px', marginTop: '4px' }}>
+                                Only people listed below can access and submit this form. They must be logged in with the invited email.
+                            </p>
+                        </div>
+
+                        {!form.is_public && (
+                            <div style={{ marginLeft: '24px', backgroundColor: '#F8FAFC', padding: '1rem', borderRadius: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Invited Respondents</label>
+
+                                {/* Add Invitee Input */}
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                    <Input
+                                        placeholder="Enter email address"
+                                        id="new-invitee-email"
+                                        style={{ marginBottom: 0 }}
+                                    />
+                                    <Button size="sm" onClick={async () => {
+                                        const emailInput = document.getElementById('new-invitee-email');
+                                        const email = emailInput.value;
+                                        if (!email || !email.includes('@')) return alert("Please enter a valid email");
+
+                                        try {
+                                            await formService.addInvitees(id, [email]);
+                                            emailInput.value = '';
+                                            // Refresh invitees list (TODO: optimize with local state update)
+                                            fetchInvitees();
+                                        } catch (err) {
+                                            alert("Failed to invite: " + err.message);
+                                        }
+                                    }}>
+                                        Add
+                                    </Button>
+                                </div>
+
+                                {/* List Invitees */}
+                                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                    {form._invitees ? (
+                                        form._invitees.length === 0 ? (
+                                            <p style={{ fontSize: '0.8rem', color: '#6B7280', fontStyle: 'italic' }}>No one invited yet.</p>
+                                        ) : (
+                                            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                                {form._invitees.map(inv => (
+                                                    <li key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #E5E7EB', fontSize: '0.9rem' }}>
+                                                        <span>{inv.email}</span>
+                                                        <span
+                                                            onClick={async () => {
+                                                                if (!window.confirm("Remove access for " + inv.email + "?")) return;
+                                                                await formService.removeInvitee(id, inv.email);
+                                                                fetchInvitees();
+                                                            }}
+                                                            style={{ color: '#EF4444', cursor: 'pointer', fontWeight: 'bold' }}
+                                                        >
+                                                            &times;
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )
+                                    ) : (
+                                        <p style={{ fontSize: '0.8rem' }}>Save form to manage invitees.</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Form Availability */}

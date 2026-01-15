@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User, Permission
 from rest_framework import serializers
-from .models import Form, Section, Question, Option, Response, Answer, UserProfile, Role, FormCollaborator
+from .models import Form, Section, Question, Option, Response, Answer, UserProfile, Role, FormCollaborator, FormInvitee
 
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,6 +16,12 @@ class RoleSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'permissions': {'write_only': True}
         }
+
+
+class FormInviteeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormInvitee
+        fields = ['id', 'email', 'invited_at']
 
 class FormCollaboratorSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)

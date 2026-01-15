@@ -64,8 +64,12 @@ class HasFormPermission(permissions.BasePermission):
             return True
             
         # 2. Public Access (Retrieve Only)
-        if view.action == 'retrieve' and obj.is_public:
-            return True
+        if view.action == 'retrieve':
+            if obj.is_public:
+                return True
+            # If Private, allow if user is invited
+            if request.user.is_authenticated and obj.invitees.filter(email=request.user.email).exists():
+                return True
 
         # 3. Creator / Owner
         if obj.creator == request.user:

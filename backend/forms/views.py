@@ -25,7 +25,7 @@ import base64
 import uuid
 import os
 
-from .models import Form, Section, Question, Option, Response, Answer, Role, FormCollaborator, AuditLog
+from .models import Form, Section, Question, Option, Response, Answer, Role, FormCollaborator, AuditLog, FormInvitee
 from .serializers import (
     FormSerializer, 
     SectionSerializer, 
@@ -37,7 +37,8 @@ from .serializers import (
     RoleSerializer,
     FormCollaboratorSerializer,
     AdminUserSerializer,
-    PermissionSerializer
+    PermissionSerializer,
+    FormInviteeSerializer
 )
 
 class RegisterView(APIView):
@@ -287,6 +288,47 @@ class FormViewSet(viewsets.ModelViewSet):
         if deleted:
             return DRFResponse({'status': 'removed'})
         return DRFResponse({'error': 'Collaborator not found'}, status=404)
+
+    @action(detail=True, methods=['get', 'post', 'delete'])
+    def invitees(self, request, pk=None):
+        """
+        Manage allowed respondents for private forms.
+        GET: List emails
+        POST: Add emails (list or single)
+        DELETE: Remove email (via query param ?email=...)
+        """
+        form = self.get_object()
+        
+        # Check permissions: Only Owner/Editor can manage invitees
+        if form.creator != request.user:
+             pass # Use HasFormPermission for finer grain, but simple check for now
+
+        if request.method == 'GET':
+            invitees = form.invitees.all().order_by('-invited_at')
+            return DRFResponse(FormInviteeSerializer(invitees, many=True).data)
+
+        if request.method == 'POST':
+            emails = request.data.get('emails', [])
+            if isinstance(emails, str):
+                emails = [emails]
+            
+            added_count = 0
+            for email in emails:
+                if not email: continue
+                email = email.strip().lower()
+                if not form.invitees.filter(email=email).exists():
+                    FormInvitee.objects.create(form=form, email=email)
+                    added_count += 1
+            
+            return DRFResponse({'status': 'success', 'added': added_count})
+
+        if request.method == 'DELETE':
+            email = request.query_params.get('email') or request.data.get('email')
+            if not email:
+                return DRFResponse({'error': 'Email required'}, status=400)
+            
+            form.invitees.filter(email=email).delete()
+            return DRFResponse({'status': 'removed'})
 
 class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()

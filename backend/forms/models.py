@@ -192,3 +192,18 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.actor} performed {self.action} on {self.target}"
+
+class FormInvitee(models.Model):
+    """
+    Emails allowed to access a private form.
+    """
+    form = models.ForeignKey(Form, on_delete=models.CASCADE, related_name='invitees')
+    email = models.EmailField()
+    invited_at = models.DateTimeField(auto_now_add=True)
+    # invited_by could be linked to User (optional)
+
+    class Meta:
+        unique_together = ('form', 'email')
+
+    def __str__(self):
+        return f"{self.email} invited to {self.form.title}"

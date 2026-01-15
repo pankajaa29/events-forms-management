@@ -31,7 +31,11 @@ const FormViewer = () => {
             setLoading(false);
         } catch (error) {
             console.error('Error fetching form:', error);
-            setError('Form not found or unavailable.');
+            if (error.response && error.response.status === 403) {
+                setError('Access Denied: This is a private form. You do not have permission to view it.');
+            } else {
+                setError('Form not found or unavailable.');
+            }
             setLoading(false);
         }
     };
