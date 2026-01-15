@@ -94,6 +94,64 @@ const FormViewer = () => {
     };
 
     if (loading) return <div className="loading">Loading form...</div>;
+
+    // Access Denied / Private Form Logic
+    if (error && error.includes('Access Denied')) {
+        return (
+            <div className="container" style={{ marginTop: '4rem', textAlign: 'center', maxWidth: '500px' }}>
+                <Card style={{ borderTop: '4px solid #FFB020' }}>
+                    <h2 style={{ marginBottom: '1rem', color: '#1F2937' }}>
+                        🔒 Private Form
+                    </h2>
+                    <p style={{ color: '#4B5563', marginBottom: '1.5rem' }}>
+                        This form is restricted to invited users only.
+                    </p>
+
+                    <div style={{ textAlign: 'left', marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                            Verify your email access:
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                                type="email"
+                                id="access-check-email"
+                                placeholder="name@example.com"
+                                style={{ flexGrow: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #D1D5DB' }}
+                            />
+                            <Button onClick={async () => {
+                                const email = document.getElementById('access-check-email').value;
+                                if (!email) return alert("Please enter email");
+
+                                try {
+                                    const res = await api.post(`forms/${id}/check_access/`, { email });
+                                    if (res.data.invited) {
+                                        // Redirect to Login with params
+                                        alert("Verified! Please log in to continue.");
+                                        window.location.href = `/login?email=${encodeURIComponent(email)}&next=/forms/${id}`;
+                                    } else {
+                                        alert("Access Denied: This email is not on the invited list.");
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                    alert("Error checking access. Please try again.");
+                                }
+                            }}>
+                                Verify
+                            </Button>
+                        </div>
+                    </div>
+
+                    <p style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>
+                        If you believe you should have access, contact the form owner.
+                    </p>
+                    <div style={{ marginTop: '1.5rem', borderTop: '1px solid #E5E7EB', paddingTop: '1rem' }}>
+                        <Button variant="secondary" onClick={() => navigate('/')} size="sm">Back to Home</Button>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
     if (error) return <div className="container" style={{ marginTop: '2rem', textAlign: 'center' }}><Card>{error}</Card></div>;
 
     // Check for Inactivation / Expiration

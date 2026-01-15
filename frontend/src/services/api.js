@@ -108,6 +108,7 @@ export const formService = {
     getInvitees: (id) => api.get(`forms/${id}/invitees/`),
     addInvitees: (id, emails) => api.post(`forms/${id}/invitees/`, { emails }),
     removeInvitee: (id, email) => api.delete(`forms/${id}/invitees/?email=${encodeURIComponent(email)}`),
+    checkAccess: (id, email) => api.post(`forms/${id}/check_access/`, { email }),
 };
 
 export const adminService = {

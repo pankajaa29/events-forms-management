@@ -330,6 +330,36 @@ class FormViewSet(viewsets.ModelViewSet):
             form.invitees.filter(email=email).delete()
             return DRFResponse({'status': 'removed'})
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
+    def check_access(self, request, pk=None):
+        """
+        Public endpoint to check if an email is invited to a private form.
+        Used to guide the user to Login/Signup.
+        """
+        form = self.get_object() # This might 403 if IsPublic=False, so we need to bypass perms temporarily
+        
+        # We need to fetch form without permission checks for this specific action logic
+        # But get_object calls get_queryset which filters.
+        # Actually, if we use a fresh lookup it is safer.
+        
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return DRFResponse({'error': 'Email required'}, status=400)
+            
+        # Direct lookup to bypass standard ViewSet filtering
+        try:
+            target_form = Form.objects.get(pk=pk) # or slug logic
+        except Form.DoesNotExist:
+             return DRFResponse({'error': 'Form not found'}, status=404)
+             
+        is_invited = target_form.invitees.filter(email=email).exists()
+        is_creator = target_form.creator.email == email
+        
+        return DRFResponse({
+            'invited': is_invited or is_creator,
+            'requires_login': True
+        })
+
 class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
