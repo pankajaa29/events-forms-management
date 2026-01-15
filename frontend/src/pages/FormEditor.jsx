@@ -492,6 +492,53 @@ const FormEditor = () => {
                                     </Button>
                                 </div>
 
+                                {/* CSV Upload */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>📂 Upload CSV</span>
+                                        <input
+                                            type="file"
+                                            accept=".csv"
+                                            style={{ display: 'none' }}
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+
+                                                const reader = new FileReader();
+                                                reader.onload = async (event) => {
+                                                    const text = event.target.result;
+                                                    // Simple regex to extract emails from CSV
+                                                    const emails = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi);
+
+                                                    if (!emails || emails.length === 0) {
+                                                        alert("No valid emails found in file.");
+                                                        return;
+                                                    }
+
+                                                    if (window.confirm(`Found ${emails.length} emails. Import them?`)) {
+                                                        try {
+                                                            const res = await formService.addInvitees(id, emails);
+                                                            alert(`Successfully added ${res.data.added} emails.`);
+                                                            fetchInvitees();
+                                                        } catch (err) {
+                                                            alert("Import failed: " + err.message);
+                                                        }
+                                                    }
+                                                    e.target.value = null; // Reset input
+                                                };
+                                                reader.readAsText(file);
+                                            }}
+                                        />
+                                    </label>
+                                    <a
+                                        href="data:text/csv;charset=utf-8,email%0Auser1@example.com%0Auser2@example.com"
+                                        download="invitees_template.csv"
+                                        style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+                                    >
+                                        Download Template
+                                    </a>
+                                </div>
+
                                 {/* List Invitees */}
                                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                                     {form._invitees ? (
