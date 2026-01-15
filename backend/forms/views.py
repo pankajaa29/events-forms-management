@@ -142,6 +142,10 @@ class FormViewSet(viewsets.ModelViewSet):
         base_queryset = Form.objects.all()
 
         if not user.is_authenticated:
+             # Allow 'retrieve' and 'check_access' to find private forms so we can throw 403 (or check invitation)
+             # instead of 404.
+             if self.action in ['retrieve', 'check_access']:
+                 return base_queryset.prefetch_related('sections__questions__options')
              return base_queryset.filter(is_public=True).prefetch_related('sections__questions__options')
              
         # Admin Access
