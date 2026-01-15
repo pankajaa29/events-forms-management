@@ -165,6 +165,8 @@ const FormEditor = () => {
             } else {
                 const response = await formService.createForm(formPayload);
                 savedFormId = response.data.id;
+                // Redirect to edit mode so ID is available in URL and Params
+                navigate(`/edit/${savedFormId}`, { replace: true });
             }
 
             // Handle Image Uploads via Dedicated Endpoint (Base64 JSON Strategy)
@@ -475,6 +477,7 @@ const FormEditor = () => {
                                         style={{ marginBottom: 0 }}
                                     />
                                     <Button size="sm" onClick={async () => {
+                                        if (!id || id === 'new') return alert("Please save the form first to generate an ID.");
                                         const emailInput = document.getElementById('new-invitee-email');
                                         const email = emailInput.value;
                                         if (!email || !email.includes('@')) return alert("Please enter a valid email");
