@@ -134,7 +134,7 @@ class FormViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'retrieve':
-             return [permissions.AllowAny()]
+             return [HasFormPermission()]
         return super().get_permissions()
 
     def get_queryset(self):
