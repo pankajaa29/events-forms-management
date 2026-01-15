@@ -165,6 +165,18 @@ const FormEditor = () => {
             } else {
                 const response = await formService.createForm(formPayload);
                 savedFormId = response.data.id;
+
+                // Process Pending Invitees
+                if (form._pendingInvitees && form._pendingInvitees.length > 0) {
+                    try {
+                        console.log(`Saving ${form._pendingInvitees.length} pending invitees...`);
+                        await formService.addInvitees(savedFormId, form._pendingInvitees);
+                    } catch (invErr) {
+                        console.error("Failed to save pending invitees:", invErr);
+                        alert("Form saved, but failed to add invitees. Please add them again.");
+                    }
+                }
+
                 // Redirect to edit mode so ID is available in URL and Params
                 navigate(`/edit/${savedFormId}`, { replace: true });
             }
@@ -477,18 +489,29 @@ const FormEditor = () => {
                                         style={{ marginBottom: 0 }}
                                     />
                                     <Button size="sm" onClick={async () => {
-                                        if (!id || id === 'new') return alert("Please save the form first to generate an ID.");
                                         const emailInput = document.getElementById('new-invitee-email');
                                         const email = emailInput.value;
                                         if (!email || !email.includes('@')) return alert("Please enter a valid email");
 
-                                        try {
-                                            await formService.addInvitees(id, [email]);
+                                        if (!id || id === 'new') {
+                                            // Local Pending State for New Forms
+                                            const currentPending = form._pendingInvitees || [];
+                                            if (currentPending.includes(email)) return alert("Email already added.");
+
+                                            setForm(prev => ({
+                                                ...prev,
+                                                _pendingInvitees: [...currentPending, email]
+                                            }));
                                             emailInput.value = '';
-                                            // Refresh invitees list (TODO: optimize with local state update)
-                                            fetchInvitees();
-                                        } catch (err) {
-                                            alert("Failed to invite: " + err.message);
+                                        } else {
+                                            // Direct API Call for Existing Forms
+                                            try {
+                                                await formService.addInvitees(id, [email]);
+                                                emailInput.value = '';
+                                                fetchInvitees();
+                                            } catch (err) {
+                                                alert("Failed to invite: " + err.message);
+                                            }
                                         }
                                     }}>
                                         Add
@@ -544,12 +567,19 @@ const FormEditor = () => {
 
                                 {/* List Invitees */}
                                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                    {form._invitees ? (
-                                        form._invitees.length === 0 ? (
-                                            <p style={{ fontSize: '0.8rem', color: '#6B7280', fontStyle: 'italic' }}>No one invited yet.</p>
-                                        ) : (
+                                    {(() => {
+                                        const savedInvitees = form._invitees || [];
+                                        const pendingInvitees = form._pendingInvitees || [];
+                                        const totalCount = savedInvitees.length + pendingInvitees.length;
+
+                                        if (totalCount === 0) {
+                                            return <p style={{ fontSize: '0.8rem', color: '#6B7280', fontStyle: 'italic' }}>No one invited yet.</p>;
+                                        }
+
+                                        return (
                                             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                                {form._invitees.map(inv => (
+                                                {/* Saved Invitees */}
+                                                {savedInvitees.map(inv => (
                                                     <li key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #E5E7EB', fontSize: '0.9rem' }}>
                                                         <span>{inv.email}</span>
                                                         <span
@@ -564,11 +594,26 @@ const FormEditor = () => {
                                                         </span>
                                                     </li>
                                                 ))}
+                                                {/* Pending Invitees */}
+                                                {pendingInvitees.map((email, idx) => (
+                                                    <li key={`pending-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #E5E7EB', fontSize: '0.9rem', backgroundColor: '#FFF7ED' }}>
+                                                        <span style={{ color: '#F59E0B' }}>{email} (Pending Save)</span>
+                                                        <span
+                                                            onClick={() => {
+                                                                setForm(prev => ({
+                                                                    ...prev,
+                                                                    _pendingInvitees: prev._pendingInvitees.filter(e => e !== email)
+                                                                }));
+                                                            }}
+                                                            style={{ color: '#EF4444', cursor: 'pointer', fontWeight: 'bold' }}
+                                                        >
+                                                            &times;
+                                                        </span>
+                                                    </li>
+                                                ))}
                                             </ul>
-                                        )
-                                    ) : (
-                                        <p style={{ fontSize: '0.8rem' }}>Save form to manage invitees.</p>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         )}
