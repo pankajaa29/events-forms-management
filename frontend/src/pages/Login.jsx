@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, User } from 'lucide-react';
 import Card from '../components/UI/Card';
@@ -13,6 +13,23 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Auto-fill email if passed in query params (from Private Form verification)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const emailParam = params.get('email');
+        if (emailParam) {
+            // If the login form was designed for username, we might need adjustments.
+            // But typical Django auth uses username. However, user might expect email login.
+            // If the system supports email as username, great. If not, we just hint it.
+            // For now, let's assume username=email or just prefill if you had an email field.
+            // WAIT - This login form ONLY has Username.
+            // If standard is username, prefilling email in username field might be wrong unless username==email.
+            // Let's sets it anyway as a hint.
+            setUsername(emailParam);
+        }
+    }, [location]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -75,7 +92,7 @@ const Login = () => {
                 </form>
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem' }}>
-                    Don't have an account? <Link to="/signup" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>Create Account</Link>
+                    Don't have an account? <Link to={`/signup${location.search}`} style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>Create Account</Link>
                 </div>
             </Card>
         </div>

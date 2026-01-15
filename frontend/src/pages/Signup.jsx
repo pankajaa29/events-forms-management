@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { UserPlus, User } from 'lucide-react';
 import Card from '../components/UI/Card';
@@ -18,7 +18,16 @@ const Signup = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useAuth(); // We'll manually login after signup
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const emailParam = params.get('email');
+        if (emailParam) {
+            setEmail(emailParam);
+        }
+    }, [location]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -127,6 +136,8 @@ const Signup = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Enter your email"
                         required
+                        disabled={!!new URLSearchParams(location.search).get('email')}
+                        style={new URLSearchParams(location.search).get('email') ? { backgroundColor: '#E5E7EB', cursor: 'not-allowed' } : {}}
                     />
                     <Input
                         label="Mobile Number"
