@@ -11,8 +11,6 @@ export const AuthProvider = ({ children }) => {
         // Log user out if token is expired or missing
         const token = localStorage.getItem('access_token');
         if (token) {
-            // In a real app, we'd verify the token or fetch user profile here
-            // For now, we'll assume valid if present
             setUser({
                 username: localStorage.getItem('username') || 'User',
                 first_name: localStorage.getItem('first_name') || '',
@@ -24,6 +22,36 @@ export const AuthProvider = ({ children }) => {
         }
         setLoading(false);
     }, []);
+
+    // Auto Logout on Idle (10 minutes)
+    useEffect(() => {
+        if (!user) return;
+
+        let idleTimer;
+        const TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+        const resetTimer = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                console.log("User idle for 10 minutes. Logging out...");
+                alert("Session expired due to inactivity.");
+                logout();
+                window.location.href = '/login';
+            }, TIMEOUT);
+        };
+
+        // Events to detect activity
+        const events = ['mousemove', 'keydown', 'click', 'scroll'];
+        events.forEach(event => document.addEventListener(event, resetTimer));
+
+        // Start timer initially
+        resetTimer();
+
+        return () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            events.forEach(event => document.removeEventListener(event, resetTimer));
+        };
+    }, [user]);
 
     const login = async (username, password) => {
         try {
