@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formService } from '../services/api';
-import { Save, ArrowLeft, PlusCircle, Trash2, Share2, BarChart, Eye } from 'lucide-react';
+import { Save, ArrowLeft, PlusCircle, Plus, Trash2, Share2, BarChart, Eye } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
