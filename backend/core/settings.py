@@ -91,8 +91,16 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db(),
+    'default': {
+        **env.db(),
+        'CONN_MAX_AGE': 600, # Persist DB connections for 10 minutes to reduce SSL handshake overhead
+    }
 }
+
+AUTHENTICATION_BACKENDS = [
+    'forms.backends.OptimizedAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 
 # Password validation
